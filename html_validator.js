@@ -214,6 +214,12 @@ var strict = doctype.extend({
     inline: 'a,abbr,acronym,br,button,cite,code,del,dfn,em,i,img,input,ins,kbd,label,map,object,q,samp,script,select,small,span,strong,sub,sup,textarea,tt,var',
     block: 'address,area,b,base,bdo,big,blockquote,body,caption,col,colgroup,dd,div,dl,dt,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,legend,li,link,meta,noscript,ol,optgroup,option,p,param,pre,style,table,tbody,td,tfoot,th,thead,title,tr,ul',
     unary: 'area,base,br,col,hr,img,input,link,meta,param',
+    unstartable: {
+      body: {parent: 'html,root', below: 'head,base,link,meta,title,style'},
+      head: {parent: 'html,root', below: ''},
+      html: {parent: 'root', below: ''},
+      tbody: {parent: 'table', below: 'thead,tfoot'}
+    },
     unclosable: 'colgroup,dd,dt,li,option,p,tbody,td,tfoot,th,thead,tr',
     cdata: 'script,style,xmp'
   },
@@ -558,3 +564,28 @@ strict.compute();
 console.log(strict);
 console.log(strict.validate(doc));
 console.log(doc);
+
+/*
+'a' contains 'inline', never 'a'
+'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym' {phrase} contains 'inline'
+'tt,i,b,big,small' {fontstyle} contains 'inline'
+'address' contains 'inline'
+'applet' contains 'param,block,inline'
+'area' empty
+'base' empty
+'basefont' empty
+'bdo' inline
+'blockquote,b' contains 'block,script', not empty
+'body' 'block,script' may contain 'ins,del' ???
+'br' empty
+'button' contains 'flow' never 'formctrl,a,form,fieldset'
+'caption' contains 'inline'
+'center' contains 'flow'
+'col' empty
+'colgroup' contains 'col'
+'dl' contains 'dt,dd' not empty
+'dd' contains 'inline'
+'dt' contains 'flow'
+'del,ins' contains 'flow'
+'dir,menu' contains 'li' never 'block'
+*/
