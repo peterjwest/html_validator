@@ -566,19 +566,27 @@ console.log(strict.validate(doc));
 console.log(doc);
 
 /*
+'form_controls' is ...
+'inline' is ...
+'block' is ...
+'flow' is 'inline,block'
+'fontstyle' is 'tt,i,b,big,small,strike,s,u'
+'phrase' is 'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym'
+'heading' is 'h1,h2,h3,h4,h5,h6'
+
 'a' contains 'inline', never 'a'
-'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym' {phrase} contains 'inline'
-'tt,i,b,big,small' {fontstyle} contains 'inline'
+'phrase' contains 'inline'
+'fontstyle' contains 'inline'
 'address' contains 'inline'
-'applet' contains 'param,block,inline'
+'applet' contains 'param,flow'
 'area' empty
 'base' empty
 'basefont' empty
 'bdo' inline
 'blockquote,b' contains 'block,script', not empty
-'body' 'block,script' may contain 'ins,del' ???
+'body' contains 'block,script' anywhere 'ins,del'
 'br' empty
-'button' contains 'flow' never 'formctrl,a,form,fieldset'
+'button' contains 'flow', never 'form_controls,a,form,fieldset'
 'caption' contains 'inline'
 'center' contains 'flow'
 'col' empty
@@ -587,5 +595,41 @@ console.log(doc);
 'dd' contains 'inline'
 'dt' contains 'flow'
 'del,ins' contains 'flow'
-'dir,menu' contains 'li' never 'block'
+'dir,menu' contains 'li' not empty, never 'block'
+'div' contains 'flow'
+'fieldset' contains 'legend,flow' first child 'legend', not empty
+'legend' contains 'inline'
+'font' contains 'inline'
+'form' contains 'block,script', not empty, never 'form'
+'frame' empty
+'frameset' contains 'frame,frameset,noframes', must include one of 'frameset,frame'
+'heading' contains 'inline'
+'head' contains 'title,base,script,style,meta,link,object', must include 'title', unique tags 'title,base'
+'hr' empty
+'html' contains exactly 'head,body'
+'iframe' contains 'flow'
+'img' empty
+'input' empty
+'isindex' empty
+'label' contains 'inline', never 'label'
+'li' contains 'flow'
+'ul,ol' contains 'li', not empty
+'link' empty
+'map' contains 'block,area', not empty
+'meta' empty
+'noframes' contains 'flow'
+'noframes:frameset' contains exactly 'body', never 'noframes'
+'noscript' contains 'block'
+'object' contains 'param,flow'
+'optgroup' contains 'option', not empty
+'option' contains '#pcdata'
+'select' contains 'optgroup,option', not empty
+'p' contains 'inline'
+'param' empty
+'pre' contains 'inline', never 'img,object,big,small,sub,sup'
+'blockquote' contains 'block,script', not empty
+'q' contains 'inline'
+
 */
+
+TITLE & BASE? +(SCRIPT|STYLE|META|LINK|OBJECT)
