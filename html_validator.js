@@ -629,7 +629,14 @@ console.log(doc);
 'pre' contains 'inline', never 'img,object,big,small,sub,sup'
 'blockquote' contains 'block,script', not empty
 'q' contains 'inline'
-
+'script' contains '#cdata'
+'span' contains 'inline'
+'style' contains '#cdata'
+'sub,sup' contains 'inline'
+'table' contains 'caption,col,colgroup,thead,tfoot,tbody', ordered 'caption,col,colgroup,thead,tfoot,tbody', must include 'tbody', exclusive 'col,colgroup'
+'thead,tfoot,tbody' contains 'tr', not empty
+'tr' contains 'td,th', not empty
+'th,td' contains 'flow'
+'textarea' contains '#pcdata'
+'title' contains '#pcdata'
 */
-
-TITLE & BASE? +(SCRIPT|STYLE|META|LINK|OBJECT)
