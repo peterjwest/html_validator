@@ -566,30 +566,31 @@ console.log(strict.validate(doc));
 console.log(doc);
 
 /*
-'form_controls' is ...
-'inline' is ...
-'block' is ...
-'flow' is 'inline,block'
+empty: [{tags: 'area,base,basefont,br,col,frame,hr,img,input,isindex,link,meta,param'}],
+not_empty: [{'blockquote,b,dl,dir,menu,fieldset,form,ul,ol,map,optgroupthead,tfoot,tbody,tr'}]
+
+'form_controls' is 'input,select,textarea,label,button'
 'fontstyle' is 'tt,i,b,big,small,strike,s,u'
 'phrase' is 'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym'
+'special' is 'a,img,object,br,script,map,q,sub,sup,span,bdo'
 'heading' is 'h1,h2,h3,h4,h5,h6'
+'inline' is '#pcdata,fontstyle,phrase,special,form_controls'
+'list' is 'ul,ol'
+'list:transitional' is 'ul,ol,menu,dir'
+'block' is 'heading,,pre,p,dl,div,noscript,blockquote,form,hr,table,fieldset,address'
+'flow' is 'inline,block'
 
 'a' contains 'inline', never 'a'
 'phrase' contains 'inline'
 'fontstyle' contains 'inline'
 'address' contains 'inline'
 'applet' contains 'param,flow'
-'area' empty
-'base' empty
-'basefont' empty
-'bdo' inline
+'bdo' contains 'inline'
 'blockquote,b' contains 'block,script', not empty
 'body' contains 'block,script' anywhere 'ins,del'
-'br' empty
 'button' contains 'flow', never 'form_controls,a,form,fieldset'
 'caption' contains 'inline'
 'center' contains 'flow'
-'col' empty
 'colgroup' contains 'col'
 'dl' contains 'dt,dd' not empty
 'dd' contains 'inline'
@@ -601,22 +602,15 @@ console.log(doc);
 'legend' contains 'inline'
 'font' contains 'inline'
 'form' contains 'block,script', not empty, never 'form'
-'frame' empty
 'frameset' contains 'frame,frameset,noframes', must include one of 'frameset,frame'
 'heading' contains 'inline'
 'head' contains 'title,base,script,style,meta,link,object', must include 'title', unique tags 'title,base'
-'hr' empty
 'html' contains exactly 'head,body'
 'iframe' contains 'flow'
-'img' empty
-'input' empty
-'isindex' empty
 'label' contains 'inline', never 'label'
 'li' contains 'flow'
 'ul,ol' contains 'li', not empty
-'link' empty
 'map' contains 'block,area', not empty
-'meta' empty
 'noframes' contains 'flow'
 'noframes:frameset' contains exactly 'body', never 'noframes'
 'noscript' contains 'block'
@@ -625,9 +619,7 @@ console.log(doc);
 'option' contains '#pcdata'
 'select' contains 'optgroup,option', not empty
 'p' contains 'inline'
-'param' empty
 'pre' contains 'inline', never 'img,object,big,small,sub,sup'
-'blockquote' contains 'block,script', not empty
 'q' contains 'inline'
 'script' contains '#cdata'
 'span' contains 'inline'
