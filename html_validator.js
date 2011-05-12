@@ -2,59 +2,6 @@
 //Original parser By John Resig (ejohn.org) http://ejohn.org/blog/pure-javascript-html-parser/
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
-/*
-//HTML:
-
-//Required
-"title"
-
-//Must contain only
-"head" contain only "base,link,meta,title,style"
-"framset" contain only "frameset,frame,noframes"
-"table" contain only "caption,col,colgroup,thead,tfoot,tbody,tr"
-"thead,tfoot,tbody" contain only "tr"
-"tr" contain only "td,th"
-"select" contain only "optgroup,option"
-"dir,menu,ol,ul" contain only "li"
-"dl" contain only "dt,dd"
-
-//Must occur in order from top
-"caption" in order from top of "table"
-"caption,col,colgroup,thead,tfoot" in order from top of "table"
-
-//Can't have both
-"table" can't have both "col,colgroup"
-
-// Requires first child
-"fieldset" first child "legend"
-
-//FRAMES:
-
-//Can't be empty
-"frameset" can't be "empty"
-
-//XHTML:
-
-//Must contain exactly
-"root" must contain "html"
-"html" must contain "head,body"
-
-//Nested
-form can't be nested
-
-//Can be empty
-body,frameset,fieldset can be empty
-
-//xmlns
-html must have xmlns=http://www.w3.org/1999/xhtml
-
-//XHTML FRAMES:
-
-//Must contain only
-"html" must contain "body,frameset"
-
-*/
-
 Object.prototype.call = function(fn) { 
   var args = Array.prototype.slice.call(arguments); 
   args.shift(); 
@@ -566,69 +513,100 @@ console.log(strict.validate(doc));
 console.log(doc);
 
 /*
-empty: [{tags: 'area,base,basefont,br,col,frame,hr,img,input,isindex,link,meta,param'}],
-not_empty: [{'blockquote,b,dl,dir,menu,fieldset,form,ul,ol,map,optgroupthead,tfoot,tbody,tr'}]
+var strict = {
+  tags: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
+  groups: {
+    form_controls: 'input,select,textarea,label,button',
+    fontstyle: 'tt,i,b,big,small',
+    phrase: 'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym',
+    special: 'a,img,object,br,script,map,q,sub,sup,span,bdo',
+    heading: 'h1,h2,h3,h4,h5,h6',
+    inline: '#pcdata,fontstyle,phrase,special,form_controls',
+    list: 'ul,ol',
+    block: 'heading,pre,p,dl,div,noscript,blockquote,form,hr,table,fieldset,address',
+    flow: 'inline,block',
+    pre_excluded: 'img,object,big,small,sub,sup'
+  },
+  implicit: 'body,head,html,tbody',
+  close_optional: 'body,colgroup,dd,dt,head,html,li,option,p,tbody,td,tfoot,th,thead,tr',
+  empty: [{tags: 'area,base,br,col,frame,hr,img,input,link,meta,param'}],
+  not_empty: [{tags: 'blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr'}]
+  required_first_child: [{tags: 'fieldset', child: 'legend'}],
+  exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
+  ordered_children: [{tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'}],
+  allowed_descendents: [{tags: 'body', allowed: 'ins,del'}],
+  banned_descendents: [
+    {tags: 'a', banned: 'a'},
+    {tags: 'button', banned: 'form_controls,a,form,fieldset'},
+    {tags: 'form', banned: 'form'},
+    {tags: 'label', banned: 'label'},
+    {tags: 'noframes:frameset', banned: 'noframes'},
+    {tags: 'pre', banned: pre_excluded}
+  ],
+  required_one_child_from: [{
+    {tags: 'head', child: 'title'},
+    {tags: 'table', child: 'tbody'},
+    {tags: 'frameset', child: 'frameset,frame'}
+  }],
+  exact_children: [
+    {tags: 'root', children: 'html'},
+    {tags: 'html', children: 'head,body'}, //head,frameset
+    {tags: 'noframes:frameset', children: 'body'}
+  ],
+  unique_children: [
+    {tags: 'head', unique: 'title,base'},
+    {tags: 'fieldset', unique: 'legend'}
+  ]
+  allowed_children: [
+    {'a,address,bdo,caption,dd,fontstyle,heading,legend,phrase,p,pre,q,span,sub,sup', children: 'inline'},
+    {'b,blockquote,body,form', children: 'block,script'},
+    {'button,dt,del,ins,div,li,noframes,th,td', children: 'flow'},
+    {'colgroup', children: 'col'},
+    {'dl', children: 'dt,dd'},
+    {'fieldset', children: 'flow,legend'},
+    {'frameset', children: 'frame,frameset,noframes'},
+    {'head', children: 'title,base,script,style,meta,link,object'},
+    {'option,textarea,title', children: '#pcdata'},
+    {'list', children: 'li'},
+    {'map', children: 'block,area'},
+    {'noscript', children: 'block'},
+    {'object', children: 'param,flow'},
+    {'optgroup', children: 'option'},
+    {'script,style', children: '#cdata'}
+    {'select', children: 'optgroup,option'},
+    {'table', children: 'caption,col,colgroup,thead,tfoot,tbody'},
+    {'thead,tfoot,tbody', children: 'tr'},
+    {'tr', children: 'td,th'}
+  ]
+};
 
-'form_controls' is 'input,select,textarea,label,button'
-'fontstyle' is 'tt,i,b,big,small,strike,s,u'
-'phrase' is 'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym'
-'special' is 'a,img,object,br,script,map,q,sub,sup,span,bdo'
-'heading' is 'h1,h2,h3,h4,h5,h6'
-'inline' is '#pcdata,fontstyle,phrase,special,form_controls'
-'list' is 'ul,ol'
-'list:transitional' is 'ul,ol,menu,dir'
-'block' is 'heading,,pre,p,dl,div,noscript,blockquote,form,hr,table,fieldset,address'
-'flow' is 'inline,block'
+var transitional = {
+  tags: transitional: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u',
+  groups: {
+    fontstyle: '+s,strike,u',
+    list: '+dir,menu',
+    pre_excluded: '+applet,font,basefont',
+    special: '+applet,font,basefont,iframe'
+  },
+  not_empty: [{tags: 'dir,menu'}],
+  empty: [{tags: 'basefont,isindex'}],
+  banned_descendents: [
+    {tags: 'dir,menu', banned: 'block'}
+  ],
+  allowed_children: [
+    {'applet', children: 'param,flow'},
+    {'center,iframe', children: 'flow'},
+    {'font', children: 'inline'}
+  ]
+};
 
-'a' contains 'inline', never 'a'
-'phrase' contains 'inline'
-'fontstyle' contains 'inline'
-'address' contains 'inline'
-'applet' contains 'param,flow'
-'bdo' contains 'inline'
-'blockquote,b' contains 'block,script', not empty
-'body' contains 'block,script' anywhere 'ins,del'
-'button' contains 'flow', never 'form_controls,a,form,fieldset'
-'caption' contains 'inline'
-'center' contains 'flow'
-'colgroup' contains 'col'
-'dl' contains 'dt,dd' not empty
-'dd' contains 'inline'
-'dt' contains 'flow'
-'del,ins' contains 'flow'
-'dir,menu' contains 'li' not empty, never 'block'
-'div' contains 'flow'
-'fieldset' contains 'legend,flow' first child 'legend', not empty
-'legend' contains 'inline'
-'font' contains 'inline'
-'form' contains 'block,script', not empty, never 'form'
-'frameset' contains 'frame,frameset,noframes', must include one of 'frameset,frame'
-'heading' contains 'inline'
-'head' contains 'title,base,script,style,meta,link,object', must include 'title', unique tags 'title,base'
-'html' contains exactly 'head,body'
-'iframe' contains 'flow'
-'label' contains 'inline', never 'label'
-'li' contains 'flow'
-'ul,ol' contains 'li', not empty
-'map' contains 'block,area', not empty
-'noframes' contains 'flow'
-'noframes:frameset' contains exactly 'body', never 'noframes'
-'noscript' contains 'block'
-'object' contains 'param,flow'
-'optgroup' contains 'option', not empty
-'option' contains '#pcdata'
-'select' contains 'optgroup,option', not empty
-'p' contains 'inline'
-'pre' contains 'inline', never 'img,object,big,small,sub,sup'
-'q' contains 'inline'
-'script' contains '#cdata'
-'span' contains 'inline'
-'style' contains '#cdata'
-'sub,sup' contains 'inline'
-'table' contains 'caption,col,colgroup,thead,tfoot,tbody', ordered 'caption,col,colgroup,thead,tfoot,tbody', must include 'tbody', exclusive 'col,colgroup'
-'thead,tfoot,tbody' contains 'tr', not empty
-'tr' contains 'td,th', not empty
-'th,td' contains 'flow'
-'textarea' contains '#pcdata'
-'title' contains '#pcdata'
+var frameset = {
+  tags: 'frame,frameset,noframes',
+  exact_children: [
+    {tags: 'html', children: 'head,frameset'}
+  ],
+};
+
+//html must have xmlns=http://www.w3.org/1999/xhtml
+
 */
