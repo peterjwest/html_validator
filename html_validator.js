@@ -525,11 +525,12 @@ var strict = {
     list: 'ul,ol',
     block: 'heading,pre,p,dl,div,noscript,blockquote,form,hr,table,fieldset,address',
     flow: 'inline,block',
-    pre_excluded: 'img,object,big,small,sub,sup'
+    pre_excluded: 'img,object,big,small,sub,sup',
+    document_body: 'body'
   },
   implicit: 'body,head,html,tbody',
   close_optional: 'body,colgroup,dd,dt,head,html,li,option,p,tbody,td,tfoot,th,thead,tr',
-  empty: [{tags: 'area,base,br,col,frame,hr,img,input,link,meta,param'}],
+  unary: [{tags: 'area,base,br,col,hr,img,input,link,meta,param'}],
   not_empty: [{tags: 'blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr'}]
   required_first_child: [{tags: 'fieldset', child: 'legend'}],
   exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
@@ -540,18 +541,15 @@ var strict = {
     {tags: 'button', banned: 'form_controls,a,form,fieldset'},
     {tags: 'form', banned: 'form'},
     {tags: 'label', banned: 'label'},
-    {tags: 'noframes:frameset', banned: 'noframes'},
     {tags: 'pre', banned: pre_excluded}
   ],
-  required_one_child_from: [{
+  requires_one_child_from: [{
     {tags: 'head', child: 'title'},
-    {tags: 'table', child: 'tbody'},
-    {tags: 'frameset', child: 'frameset,frame'}
+    {tags: 'table', child: 'tbody'}
   }],
   exact_children: [
     {tags: 'root', children: 'html'},
-    {tags: 'html', children: 'head,body'}, //head,frameset
-    {tags: 'noframes:frameset', children: 'body'}
+    {tags: 'html', children: 'head,document_body'}
   ],
   unique_children: [
     {tags: 'head', unique: 'title,base'},
@@ -560,11 +558,10 @@ var strict = {
   allowed_children: [
     {'a,address,bdo,caption,dd,fontstyle,heading,legend,phrase,p,pre,q,span,sub,sup', children: 'inline'},
     {'b,blockquote,body,form', children: 'block,script'},
-    {'button,dt,del,ins,div,li,noframes,th,td', children: 'flow'},
+    {'button,dt,del,ins,div,li,th,td', children: 'flow'},
     {'colgroup', children: 'col'},
     {'dl', children: 'dt,dd'},
     {'fieldset', children: 'flow,legend'},
-    {'frameset', children: 'frame,frameset,noframes'},
     {'head', children: 'title,base,script,style,meta,link,object'},
     {'option,textarea,title', children: '#pcdata'},
     {'list', children: 'li'},
@@ -581,32 +578,48 @@ var strict = {
 };
 
 var transitional = {
-  tags: transitional: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u',
+  tags: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u,noframes',
   groups: {
     fontstyle: '+s,strike,u',
     list: '+dir,menu',
     pre_excluded: '+applet,font,basefont',
-    special: '+applet,font,basefont,iframe'
+    special: '+applet,font,basefont,iframe',
+    block: '+center,noframes,isindex',
+    noframes_content: 'flow'
   },
   not_empty: [{tags: 'dir,menu'}],
-  empty: [{tags: 'basefont,isindex'}],
+  unary: [{tags: 'basefont,isindex'}],
   banned_descendents: [
     {tags: 'dir,menu', banned: 'block'}
   ],
   allowed_children: [
-    {'applet', children: 'param,flow'},
-    {'center,iframe', children: 'flow'},
-    {'font', children: 'inline'}
+    {tags: 'applet', children: 'param,flow'},
+    {tags: 'center,iframe', children: 'flow'},
+    {tags: 'noframes', children: 'noframes_content'}
+    {tags: 'font', children: 'inline'}
   ]
 };
 
 var frameset = {
-  tags: 'frame,frameset,noframes',
+  tags: 'frame,frameset',
+  groups: {
+    document_body: 'frameset'
+    noframes_content: 'body'
+  },
+  unary: [{tags: 'frame'}],
   exact_children: [
-    {tags: 'html', children: 'head,frameset'}
+    {tags: 'noframes', children: 'noframes_content'}
   ],
+  banned_descendents: [
+    {tags: 'noframes', banned: 'noframes'}
+  ],
+  requires_one_child_from: [{
+    {tags: 'frameset', child: 'frameset,frame'}
+  }],
+  allowed_children: [
+    {tags: 'frameset', children: 'frame,frameset,noframes'}
+  ]
 };
 
 //html must have xmlns=http://www.w3.org/1999/xhtml
-
 */
