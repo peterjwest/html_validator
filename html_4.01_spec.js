@@ -1,8 +1,7 @@
-var strict = function(doctype) {
-  return doctype.extend({
-    tags: {
-      tags: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
-      groups: {
+var html_401_spec = function(doctype) {
+  this.strict = doctype.extend({
+    groups: {
+      tags: {
         form_controls: 'input,select,textarea,label,button',
         font_style: 'tt,i,b,big,small',
         phrase: 'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym',
@@ -17,16 +16,18 @@ var strict = function(doctype) {
         without_lang: 'base,br,param,script',
         without_title: 'base,head,html,meta,param,script,title'
       },
+      attrs: {
+        standard_events: 'onclick,ondblclick,onkeydown,onkeypress,onkeyup,onmousedown,onmousemove,onmouseout,onmouseover,onmouseup'
+      }
+    },
+    tags: {
+      tags: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
       implicit: 'body,head,html,tbody',
       close_optional: 'body,colgroup,dd,dt,head,html,li,option,p,tbody,td,tfoot,th,thead,tr',
       unary: 'area,base,br,col,hr,img,input,link,meta,param',
       not_empty: 'blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr',
     },
-    
     attrs: {
-      groups: {
-        standard_events: 'onclick,ondblclick,onkeydown,onkeypress,onkeyup,onmousedown,onmousemove,onmouseout,onmouseover,onmouseup'
-      },
       required: [
         {attrs: 'action', include: 'form', values: '#cdata'},
         {attrs: 'alt', include: 'area,img', values: '#cdata'},
@@ -98,10 +99,10 @@ var strict = function(doctype) {
         {attrs: 'scheme', include: 'meta', values: '#cdata'},
         {attrs: 'scope', include: 'td,th', values: 'row,col,rowgroup,colgroup'},
         {attrs: 'selected', include: 'option', values: '#self'},
-        {attrs: 'shape', include: 'a,area','rect,circle,poly,default'},
-        {attrs: 'size', include: 'select','#number'},
-        {attrs: 'span', include: 'col,colgroup','#number'},
-        {attrs: 'src', include: 'script','#cdata'},
+        {attrs: 'shape', include: 'a,area', values: 'rect,circle,poly,default'},
+        {attrs: 'size', include: 'select', values: '#number'},
+        {attrs: 'span', include: 'col,colgroup', values: '#number'},
+        {attrs: 'src', include: 'script', values: '#cdata'},
         {attrs: 'style', include: 'all', values: '#cdata'},
         {attrs: 'style', exclude: 'style,without_title'},
         {attrs: 'summary', include: 'table', values: '#cdata'},
@@ -118,7 +119,6 @@ var strict = function(doctype) {
         {attrs: 'width', include: 'col,colgroup', values: '#multi_length'}
       ]
     },
-    
     rules: {
       required_first_child: [{tags: 'fieldset', child: 'legend'}],
       exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
@@ -131,10 +131,10 @@ var strict = function(doctype) {
         {tags: 'label', banned: 'label'},
         {tags: 'pre', banned: pre_excluded}
       ],
-      requires_one_child_from: [{
+      requires_one_child_from: [
         {tags: 'head', child: 'title'},
         {tags: 'table', child: 'tbody'}
-      }],
+      ],
       exact_children: [
         {tags: 'root', children: 'html'},
         {tags: 'html', children: 'head,document_body'}
@@ -142,7 +142,7 @@ var strict = function(doctype) {
       unique_children: [
         {tags: 'head', unique: 'title,base'},
         {tags: 'fieldset', unique: 'legend'}
-      ]
+      ],
       allowed_children: [
         {tags: 'a,address,bdo,caption,dd,font_style,heading,legend,phrase,p,pre,q,span,sub,sup', children: 'inline'},
         {tags: 'b,blockquote,body,form', children: 'block,script'},
@@ -157,7 +157,7 @@ var strict = function(doctype) {
         {tags: 'noscript', children: 'block'},
         {tags: 'object', children: 'param,flow'},
         {tags: 'optgroup', children: 'option'},
-        {tags: 'script,style', children: '#cdata'}
+        {tags: 'script,style', children: '#cdata'},
         {tags: 'select', children: 'optgroup,option'},
         {tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'},
         {tags: 'thead,tfoot,tbody', children: 'tr'},
@@ -165,13 +165,10 @@ var strict = function(doctype) {
       ]
     } 
   });
-};
 
-var transitional = function(strict) {
-  return strict.extend({
-    tags: {
-      tags: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u,noframes',
-      groups: {
+  this.transitional = strict.extend({
+    groups: {
+      tags: {
         font_style: '+s,strike,u',
         list: '+dir,menu',
         pre_excluded: '+applet,font,basefont',
@@ -181,7 +178,11 @@ var transitional = function(strict) {
         frame_elements: 'iframe',
         without_lang: '+basefont,applet,frame_elements',
         without_title: '+basefont'
-      },
+      }
+    },
+    tags: {
+      tags: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u,noframes',
+      
       unary: '+basefont,isindex',
       not_empty: '+dir,menu'
     },
@@ -199,7 +200,7 @@ var transitional = function(strict) {
         {attrs: 'alt,arhive,code,codebase,name,object', include: 'applet', values: '#cdata'},
         {attrs: 'background', include: 'body', values: '#cdata'},
         {attrs: 'bgcolor', include: 'table,td,th,tr,body', values: '#color'},
-        {attrs: 'border', include: 'img,object',' values: #number'},
+        {attrs: 'border', include: 'img,object', values: '#number'},
         {attrs: 'clear', include: 'br', values: 'left,all,right,none'},
         {attrs: 'color', include: 'basefont,font', values: '#color'},
         {attrs: 'compact', include: 'dir,dl,menu,ol,ul', values: '#self'},
@@ -228,17 +229,17 @@ var transitional = function(strict) {
       ]
     }
   });
-};
 
-var frameset = function(transitional) {
-  return transitional.extend({
-    tags: {
-      tags: '+frame,frameset',
-      groups: {
+  this.frameset = transitional.extend({
+    groups: {
+      tags: {
         document_body: 'frameset',
         noframes_content: 'body',
         frame_elements: 'frame,iframe'
-      },
+      }
+    },
+    tags: {
+      tags: '+frame,frameset',
       unary: '+frame'
     },
     attrs: {
@@ -246,7 +247,7 @@ var frameset = function(transitional) {
         {attrs: 'cols,onload,onunload,rows', include: 'frameset', values: '#cdata'},
         {attrs: 'noresize', include: 'frame', values: '#self'}
       ]
-    }
+    },
     rules: {
       exact_children: [{tags: 'noframes', children: 'noframes_content'}],
       banned_descendents: [{tags: 'noframes', banned: 'noframes'}],

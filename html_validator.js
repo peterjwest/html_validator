@@ -9,10 +9,18 @@ Object.prototype.call = function(fn) {
 };
 
 var each = function(fn) {
-  var temp = {};
   for(var i in this) {
-    if (this.call(temp.hasOwnProperty, i)) {
+    if (this.call(Object.hasOwnProperty, i)) {
       this.call(fn, this[i], i);
+    }
+  }
+  return this;
+};
+
+var each2 = function(fn) {
+  for(var i in this) {
+    if (this.call(Object.hasOwnProperty, i)) {
+      this[i].call(fn, i, this);
     }
   }
   return this;
@@ -89,25 +97,16 @@ var doctype = {
   attrs: {tag: {}, filters: []},
   rules: {rules: {}, sets: {}, messages: {}},
   
-  extend: function(doctype) {
-    var original = this;
-    original.tags.call(each, function(tags, type) {
-      if (doctype.tags[type]) doctype.tags[type] = [original.tags[type], doctype.tags[type]].join(",");
-      else doctype.tags[type] = original.tags[type];
+  extend: function(spec) {
+    this.groups.call(each2, function(type) {
+      spec.groups[type] = spec.groups[type] || {};
+      this.call(each2, function(group) {
+        spec.groups[type][group] = spec.groups[type][group] ? spec.groups[type][group]+","+this : this;
+      });
     });
-    original.attrs.tag.call(each, function(attrType, type) {
-      if (doctype.attrs.tag[type]) {
-        attrType.call(each, function(tag, name) {
-            if (doctype.attrs.tag[type][name]) doctype.attrs.tag[type][name] = [original.attrs.tag[type][name], doctype.attrs.tag[type][name]].join(",");
-            else doctype.attrs.tag[type][name] = original.attrs.tag[type][name];
-        });
-      }
-      else doctype.attrs.tag[type] = original.attrs.tag[type];
-    });
-    doctype.attrs.filters = doctype.attrs.filter ? doctype.attrs.filters : original.attrs.filters.concat(doctype.attrs.filters);
-    doctype.extend = original.extend;
-    doctype.compute = original.compute;
-    doctype.validate = original.validate;
+    spec.extend = this.extend;
+    spec.compute = this.compute;
+    spec.validate = this.validate;
     return doctype;
   },
   
@@ -156,7 +155,7 @@ var doctype = {
       });
     });
     return errors;
-  }
+  },
   
   rules: {
     attributes: {
@@ -303,6 +302,7 @@ var HTMLParser = function(html, handler, doctype) {
   parseEndTag();
 };
 
+/*
 var doc = {name: 'root', children: [], all: []};
 var line = 1;
 var character = 1;
@@ -344,11 +344,15 @@ HTMLParser(
     line += (html.match(/(\r\n|\n|\r)/g) || []).length;
   }
 }, strict);
+*/
 
-strict.compute();
-console.log(strict);
-console.log(strict.validate(doc));
-console.log(doc);
+var spec = new html_401_spec(doctype);
+console.log(spec);
+
+//strict.compute();
+console.log(strict(doctype));
+//console.log(strict.validate(doc));
+//console.log(doc);
 
 /*
 //html must have xmlns=http://www.w3.org/1999/xhtml
