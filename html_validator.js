@@ -92,22 +92,28 @@ var inTag = function() {
   return "<"+this+">";
 };
 
+var combineLists = function(a,b) {
+  return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a;
+};
+
 var doctype = {
   tags: {},
   attrs: {tag: {}, filters: []},
   rules: {rules: {}, sets: {}, messages: {}},
   
   extend: function(spec) {
-    this.groups.call(each2, function(type) {
-      spec.groups[type] = spec.groups[type] || {};
-      this.call(each2, function(group) {
-        spec.groups[type][group] = spec.groups[type][group] ? spec.groups[type][group]+","+this : this;
+    if (this.groups) {
+      this.groups.call(each2, function(type) {
+        spec.groups[type] = spec.groups[type] || {};
+        this.call(each2, function(group) {
+          spec.groups[type][group] = combineLists(this, spec.groups[type][group]);
+        });
       });
-    });
+    }
     spec.extend = this.extend;
     spec.compute = this.compute;
     spec.validate = this.validate;
-    return doctype;
+    return spec;
   },
   
   compute: function() {
@@ -350,7 +356,7 @@ var spec = new html_401_spec(doctype);
 console.log(spec);
 
 //strict.compute();
-console.log(strict(doctype));
+//console.log(strict(doctype));
 //console.log(strict.validate(doc));
 //console.log(doc);
 

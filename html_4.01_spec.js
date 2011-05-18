@@ -2,30 +2,28 @@ var html_401_spec = function(doctype) {
   this.strict = doctype.extend({
     groups: {
       tags: {
+        all: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
+        block: 'heading,pre,p,dl,div,noscript,blockquote,form,hr,table,fieldset,address',
+        close_optional: 'body,colgroup,dd,dt,head,html,li,option,p,tbody,td,tfoot,th,thead,tr',
+        document_body: 'body',
+        flow: 'inline,block',
         form_controls: 'input,select,textarea,label,button',
         font_style: 'tt,i,b,big,small',
-        phrase: 'em,strong,dfn,code,samp,kbd,var,cite,abbr,acronym',
+        phrase: 'abbr,acronym,cite,code,dfn,em,kbd,strong,samp,var',
         special: 'a,img,object,br,script,map,q,sub,sup,span,bdo',
         heading: 'h1,h2,h3,h4,h5,h6',
+        implicit: 'body,head,html,tbody',
         inline: '#pcdata,font_style,phrase,special,form_controls',
         list: 'ul,ol',
-        block: 'heading,pre,p,dl,div,noscript,blockquote,form,hr,table,fieldset,address',
-        flow: 'inline,block',
+        not_empty: 'blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr',
         pre_excluded: 'img,object,big,small,sub,sup',
-        document_body: 'body',
+        unary: 'area,base,br,col,hr,img,input,link,meta,param',
         without_lang: 'base,br,param,script',
         without_title: 'base,head,html,meta,param,script,title'
       },
       attrs: {
         standard_events: 'onclick,ondblclick,onkeydown,onkeypress,onkeyup,onmousedown,onmousemove,onmouseout,onmouseover,onmouseup'
       }
-    },
-    tags: {
-      tags: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
-      implicit: 'body,head,html,tbody',
-      close_optional: 'body,colgroup,dd,dt,head,html,li,option,p,tbody,td,tfoot,th,thead,tr',
-      unary: 'area,base,br,col,hr,img,input,link,meta,param',
-      not_empty: 'blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr',
     },
     attrs: {
       required: [
@@ -129,7 +127,7 @@ var html_401_spec = function(doctype) {
         {tags: 'button', banned: 'form_controls,a,form,fieldset'},
         {tags: 'form', banned: 'form'},
         {tags: 'label', banned: 'label'},
-        {tags: 'pre', banned: pre_excluded}
+        {tags: 'pre', banned: 'pre_excluded'}
       ],
       requires_one_child_from: [
         {tags: 'head', child: 'title'},
@@ -166,25 +164,22 @@ var html_401_spec = function(doctype) {
     } 
   });
 
-  this.transitional = strict.extend({
+  this.transitional = this.strict.extend({
     groups: {
       tags: {
+        all: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u,noframes',
+        block: '+center,noframes,isindex',
         font_style: '+s,strike,u',
+        frame_elements: 'iframe',
         list: '+dir,menu',
+        noframes_content: 'flow',
+        not_empty: '+dir,menu',
         pre_excluded: '+applet,font,basefont',
         special: '+applet,font,basefont,iframe',
-        block: '+center,noframes,isindex',
-        noframes_content: 'flow',
-        frame_elements: 'iframe',
+        unary: '+basefont,isindex',
         without_lang: '+basefont,applet,frame_elements',
         without_title: '+basefont'
       }
-    },
-    tags: {
-      tags: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u,noframes',
-      
-      unary: '+basefont,isindex',
-      not_empty: '+dir,menu'
     },
     attrs: {
       required: [
@@ -230,17 +225,15 @@ var html_401_spec = function(doctype) {
     }
   });
 
-  this.frameset = transitional.extend({
+  this.frameset = this.transitional.extend({
     groups: {
       tags: {
+        all: '+frame,frameset',
         document_body: 'frameset',
+        frame_elements: '+frame',
         noframes_content: 'body',
-        frame_elements: 'frame,iframe'
+        unary: '+frame'
       }
-    },
-    tags: {
-      tags: '+frame,frameset',
-      unary: '+frame'
     },
     attrs: {
       optional: [
