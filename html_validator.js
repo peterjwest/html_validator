@@ -60,13 +60,20 @@ var keys = function() {
   return array;
 }
 
+var merge = function(b) {
+  var a = this;
+  b.call(each, function(name) {
+    a[name] = this;
+  });
+  return this;
+};
+
 var makeMap = function() {
   var array = this.split(",");
   var obj = {};
   for (var i = 0; i < array.length; i++) obj[array[i]] = true;
   return obj;
 };
-
 
 var englishList = function(separator) {
   return this.slice(0, this.length -1).join(", ")+(this.length > 1 ? (separator || " and ") : "")+(this[this.length - 1] || "");
@@ -77,12 +84,27 @@ var prepend = function(string) { return string + this; };
 var inTag = function() { return "<"+this+">"; };
 var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a; };
 var combineArrays = function(a,b) { return (a || []).concat(b || []); }
+var addAttributes = function(array, b) { 
+  var a = this;
+  array.call(map, function() { a[this] = b[this]; }); 
+}
+
+var expandList = function(groups) {
+  var map = this.call(makeMap);
+  map.call(each, function(name) {
+    if (groups[name]) {
+      delete map[name];
+      map.call(merge, groups[name].call(expandList, groups));
+    }
+  });
+  return map;
+};
 
 var doctype = {
   groups: {},
   attrs: {},
   rules: {},
-
+  
   extend: function(spec) {
     this.groups.call(each, function(type) {
       spec.groups[type] = spec.groups[type] || {};
@@ -98,44 +120,14 @@ var doctype = {
     this.rules.call(each, function(name) {
       spec.rules[name] = combineArrays(this, spec.rules[name]);
     });
-    spec.extend = this.extend;
-    spec.compute = this.compute;
-    spec.validate = this.validate;
+    spec.call(addAttributes, ['extend','compute','validate','rule_logic'], this);
     return spec;
   },
   
   compute: function() {
-    if (!this.computed) {
-      var doctype = this;
-      doctype.tags.call(each, function(type) {
-        doctype.tags[type] = this.call(makeMap);
-      });
-      
-      doctype.attrs.filters.call(map, function() {
-        var filter = this;
-        var optional = doctype.attrs.tag.optional;
-        if (filter.only) filter.only = filter.only.call(makeMap);
-        if (filter.except) filter.except = filter.except.call(makeMap);
-        optional.call(each, function(name) {
-          if ((!filter.only || filter.only[name]) && (!filter.except || !filter.except[name])) optional[name] = this ? this+","+filter.attrs : filter.attrs;
-        });
-      });
-      delete doctype.attrs.filters;
-      doctype.attrs.tag.call(each, function(type) {
-        this.call(each, function(name) {
-          doctype.attrs.tag[type][name] = doctype.attrs.tag[type][name].call(makeMap);
-        });
-      });
-      doctype.rules.sets.call(each, function() {
-        this.call(map, function(index) {
-          var item = this;
-          this.call(each, function(name) {
-            item[name] = this.call(makeMap);
-          });
-        });
-      });
-      doctype.computed = true;
-    }
+    if (this.computed) return;
+    this.computed = true;
+    
   },
   
   validate: function(doc) {
@@ -152,7 +144,7 @@ var doctype = {
     return errors;
   },
   
-  ruleCode: {
+  rule_logic: {
     attributes: {
       number: /^\s*[0-9]+\s*$/,
       length: /^\s*[0-9]+%?\s*/,
