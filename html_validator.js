@@ -11,16 +11,7 @@ Object.prototype.call = function(fn) {
 var each = function(fn) {
   for(var i in this) {
     if (this.call(Object.hasOwnProperty, i)) {
-      this.call(fn, this[i], i);
-    }
-  }
-  return this;
-};
-
-var each2 = function(fn) {
-  for(var i in this) {
-    if (this.call(Object.hasOwnProperty, i)) {
-      this[i].call(fn, i, this);
+      if (this[i] !== null && this[i] !== undefined) this[i].call(fn, i, this);
     }
   }
   return this;
@@ -55,15 +46,15 @@ var sum = function(){
 
 var values = function() {
   var array = [];
-  this.call(each, function(item) {
-    array.push(item);
+  this.call(each, function() {
+    array.push(this);
   });
   return array;
 }
 
 var keys = function() {
   var array = [];
-  this.call(each, function(item, key) {
+  this.call(each, function(key) {
     array.push(key);
   });
   return array;
@@ -93,18 +84,18 @@ var doctype = {
   rules: {},
 
   extend: function(spec) {
-    this.groups.call(each2, function(type) {
+    this.groups.call(each, function(type) {
       spec.groups[type] = spec.groups[type] || {};
-      this.call(each2, function(group) {
+      this.call(each, function(group) {
         spec.groups[type][group] = combineLists(this, spec.groups[type][group]);
       });
     });
     spec.attrs = spec.attrs || {};
-    this.attrs.call(each2, function(type) {
+    this.attrs.call(each, function(type) {
       spec.attrs[type] = combineArrays(this, spec.attrs[type]);
     });
     spec.rules = spec.rules || {};
-    this.rules.call(each2, function(name) {
+    this.rules.call(each, function(name) {
       spec.rules[name] = combineArrays(this, spec.rules[name]);
     });
     spec.extend = this.extend;
@@ -116,8 +107,8 @@ var doctype = {
   compute: function() {
     if (!this.computed) {
       var doctype = this;
-      doctype.tags.call(each, function(tags, type) {
-        doctype.tags[type] = tags.call(makeMap);
+      doctype.tags.call(each, function(type) {
+        doctype.tags[type] = this.call(makeMap);
       });
       
       doctype.attrs.filters.call(map, function() {
@@ -125,21 +116,21 @@ var doctype = {
         var optional = doctype.attrs.tag.optional;
         if (filter.only) filter.only = filter.only.call(makeMap);
         if (filter.except) filter.except = filter.except.call(makeMap);
-        optional.call(each, function(attrs, name) {
-          if ((!filter.only || filter.only[name]) && (!filter.except || !filter.except[name])) optional[name] = attrs ? attrs+","+filter.attrs : filter.attrs;
+        optional.call(each, function(name) {
+          if ((!filter.only || filter.only[name]) && (!filter.except || !filter.except[name])) optional[name] = this ? this+","+filter.attrs : filter.attrs;
         });
       });
       delete doctype.attrs.filters;
-      doctype.attrs.tag.call(each, function(attrType, type) {
-        attrType.call(each, function(tag, name) {
+      doctype.attrs.tag.call(each, function(type) {
+        this.call(each, function(name) {
           doctype.attrs.tag[type][name] = doctype.attrs.tag[type][name].call(makeMap);
         });
       });
-      doctype.rules.sets.call(each, function(set) {
-        set.call(map, function(index) {
+      doctype.rules.sets.call(each, function() {
+        this.call(map, function(index) {
           var item = this;
-          this.call(each, function(property, name) {
-            item[name] = property.call(makeMap);
+          this.call(each, function(name) {
+            item[name] = this.call(makeMap);
           });
         });
       });
@@ -151,7 +142,8 @@ var doctype = {
     var doctype = this;
     errors = [];
     console.log(doctype.rules);
-    doctype.rules.rules.call(each, function(rule, name) {
+    doctype.rules.rules.call(each, function(name) {
+      var rule = this;
       doctype.rules.sets[name].call(map, function() {
         var set = this;
         errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rules.messages[name], set); }));
@@ -173,7 +165,7 @@ var doctype = {
         var matches = {};
         document.all.call(map, function() {
           var tag = this;
-          set.tags.call(each, function(nil, name) {
+          set.tags.call(each, function(name) {
             matches[name] = matches[name] || {name: name, tags: []};
             if (tag.name == name) { matches[name].tags.push(tag); }
           });
