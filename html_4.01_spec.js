@@ -17,6 +17,7 @@ var html_401_spec = function(doctype) {
         list: 'ul,ol',
         not_empty: 'blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr',
         pre_excluded: 'img,object,big,small,sub,sup',
+        table_elements: 'col,colgroup,tbody,td,tfoot,th,thead,tr',
         unary: 'area,base,br,col,hr,img,input,link,meta,param',
         without_lang: 'base,br,param,script',
         without_title: 'base,head,html,meta,param,script,title'
@@ -42,13 +43,13 @@ var html_401_spec = function(doctype) {
         {attrs: 'accept', include: 'form,input', values: '#cdata'},
         {attrs: 'accept-charset,enctype,name,onreset,onsubmit', include: 'form', values: '#cdata'},
         {attrs: 'accesskey', include: 'a,area,button,input,label,legend,textarea', values: '#cdata'},
-        {attrs: 'align', include: 'col,colgroup,tbody,td,tfoot,th,thead,tr', values: 'left,center,right,justify,char'},
+        {attrs: 'align', include: 'table_elements', values: 'left,center,right,justify,char'},
         {attrs: 'alt,size,src', include: 'input', values: '#cdata'},
         {attrs: 'archive,classid,codebase,codetype,data,standby,type', include: 'object', values: '#cdata'},
         {attrs: 'border', include: 'table', values: '#number'},
         {attrs: 'cellpadding,cellspacing,width', include: 'table', values: '#length'},
-        {attrs: 'char', include: 'col,colgroup,tbody,td,tfoot,th,thead,tr', values: '#cdata'},
-        {attrs: 'charoff', include: 'col,colgroup,tbody,td,tfoot,th,thead,tr', values: '#length'},
+        {attrs: 'char', include: 'table_elements', values: '#cdata'},
+        {attrs: 'charoff', include: 'table_elements', values: '#length'},
         {attrs: 'charset', include: 'a,link,script', values: '#cdata'},
         {attrs: 'checked', include: 'input', values: '#self'},
         {attrs: 'cite', include: 'blockquote,q', values: '#cdata'},
@@ -111,36 +112,13 @@ var html_401_spec = function(doctype) {
         {attrs: 'type', include: 'input', values: 'text,password,checkbox,radio,submit,reset,file,hidden,image,button'},
         {attrs: 'type', include: 'param', values: '#cdata'},
         {attrs: 'usemap', include: 'img,input,object', values: '#cdata'},
-        {attrs: 'valign', include: 'col,colgroup,tbody,td,tfoot,th,thead,tr', values: 'top,middle,bottom,baseline'},
+        {attrs: 'valign', include: 'table_elements', values: 'top,middle,bottom,baseline'},
         {attrs: 'value', include: 'button,input,param', values: '#cdata'},
         {attrs: 'valuetype', include: 'param', values: 'data,ref,object'},
         {attrs: 'width', include: 'col,colgroup', values: '#multi_length'}
       ]
     },
     rules: {
-      required_first_child: [{tags: 'fieldset', child: 'legend'}],
-      exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
-      ordered_children: [{tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'}],
-      allowed_descendents: [{tags: 'body', allowed: 'ins,del'}],
-      banned_descendents: [
-        {tags: 'a', banned: 'a'},
-        {tags: 'button', banned: 'form_controls,a,form,fieldset'},
-        {tags: 'form', banned: 'form'},
-        {tags: 'label', banned: 'label'},
-        {tags: 'pre', banned: 'pre_excluded'}
-      ],
-      requires_one_child_from: [
-        {tags: 'head', child: 'title'},
-        {tags: 'table', child: 'tbody'}
-      ],
-      exact_children: [
-        {tags: 'root', children: 'html'},
-        {tags: 'html', children: 'head,document_body'}
-      ],
-      unique_children: [
-        {tags: 'head', unique: 'title,base'},
-        {tags: 'fieldset', unique: 'legend'}
-      ],
       allowed_children: [
         {tags: 'a,address,bdo,caption,dd,font_style,heading,legend,phrase,p,pre,q,span,sub,sup', children: 'inline'},
         {tags: 'b,blockquote,body,form', children: 'block,script'},
@@ -160,6 +138,29 @@ var html_401_spec = function(doctype) {
         {tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'},
         {tags: 'thead,tfoot,tbody', children: 'tr'},
         {tags: 'tr', children: 'td,th'}
+      ],
+      allowed_descendents: [{tags: 'body', allowed: 'ins,del'}],
+      banned_descendents: [
+        {tags: 'a', banned: 'a'},
+        {tags: 'button', banned: 'form_controls,a,form,fieldset'},
+        {tags: 'form', banned: 'form'},
+        {tags: 'label', banned: 'label'},
+        {tags: 'pre', banned: 'pre_excluded'}
+      ],
+      exact_children: [
+        {tags: 'root', children: 'html'},
+        {tags: 'html', children: 'head,document_body'}
+      ],
+      exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
+      ordered_children: [{tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'}],
+      required_first_child: [{tags: 'fieldset', child: 'legend'}],
+      requires_one_child_from: [
+        {tags: 'head', child: 'title'},
+        {tags: 'table', child: 'tbody'}
+      ],
+      unique_children: [
+        {tags: 'head', unique: 'title,base'},
+        {tags: 'fieldset', unique: 'legend'}
       ]
     } 
   });

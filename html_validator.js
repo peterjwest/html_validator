@@ -76,40 +76,37 @@ var makeMap = function() {
   return obj;
 };
 
-var descendents = function(fn) {
-  if (this.children) this.children.call(map, fn);
-};
 
 var englishList = function(separator) {
   return this.slice(0, this.length -1).join(", ")+(this.length > 1 ? (separator || " and ") : "")+(this[this.length - 1] || "");
 };
 
-var prepend = function(string) {
-  return string+this;
-};
-
-var inTag = function() {
-  return "<"+this+">";
-};
-
-var combineLists = function(a,b) {
-  return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a;
-};
+var descendents = function(fn) { if (this.children) this.children.call(map, fn); };
+var prepend = function(string) { return string + this; };
+var inTag = function() { return "<"+this+">"; };
+var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a; };
+var combineArrays = function(a,b) { return (a || []).concat(b || []); }
 
 var doctype = {
-  tags: {},
-  attrs: {tag: {}, filters: []},
-  rules: {rules: {}, sets: {}, messages: {}},
-  
+  groups: {},
+  attrs: {},
+  rules: {},
+
   extend: function(spec) {
-    if (this.groups) {
-      this.groups.call(each2, function(type) {
-        spec.groups[type] = spec.groups[type] || {};
-        this.call(each2, function(group) {
-          spec.groups[type][group] = combineLists(this, spec.groups[type][group]);
-        });
+    this.groups.call(each2, function(type) {
+      spec.groups[type] = spec.groups[type] || {};
+      this.call(each2, function(group) {
+        spec.groups[type][group] = combineLists(this, spec.groups[type][group]);
       });
-    }
+    });
+    spec.attrs = spec.attrs || {};
+    this.attrs.call(each2, function(type) {
+      spec.attrs[type] = combineArrays(this, spec.attrs[type]);
+    });
+    spec.rules = spec.rules || {};
+    this.rules.call(each2, function(name) {
+      spec.rules[name] = combineArrays(this, spec.rules[name]);
+    });
     spec.extend = this.extend;
     spec.compute = this.compute;
     spec.validate = this.validate;
@@ -163,7 +160,7 @@ var doctype = {
     return errors;
   },
   
-  rules: {
+  ruleCode: {
     attributes: {
       number: /^\s*[0-9]+\s*$/,
       length: /^\s*[0-9]+%?\s*/,
