@@ -90,6 +90,7 @@ var addAttributes = function(array, b) {
 }
 
 var expandList = function(groups) {
+  if (!this.indexOf) return this;
   var map = this.call(makeMap);
   map.call(each, function(name) {
     if (groups[name]) {
@@ -127,7 +128,28 @@ var doctype = {
   compute: function() {
     if (this.computed) return;
     this.computed = true;
+    this.groups.call(each, function(type) {
+      var groupType = this;
+      this.call(each, function(group) {
+        groupType[group] = this.call(expandList, groupType);
+      });
+    });
+    var groups = this.groups;
+    this.attrs.call(each, function() {
+      this.call(map, function() {
+        this.attrs = this.attrs.call(expandList, groups.attrs);
+        if (this.include) this.include = this.include.call(expandList, groups.tags);
+        if (this.exclude) this.exclude = this.exclude.call(expandList, groups.tags);
+      });
+    });
     
+    this.rules.call(each, function() {
+      this.call(map, function() {
+        this.call(each, function(type, rule) {
+          rule[type] = this.call(expandList, groups.tags);
+        });
+      });
+    });
   },
   
   validate: function(doc) {
@@ -334,6 +356,7 @@ HTMLParser(
 */
 
 var spec = new html_401_spec(doctype);
+spec.transitional.compute();
 console.log(spec);
 
 //strict.compute();
