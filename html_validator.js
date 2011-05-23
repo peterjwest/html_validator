@@ -104,7 +104,7 @@ var expandList = function(groups) {
 var doctype = {
   groups: {},
   attrs: {},
-  rules: {},
+  rulesets: {},
   
   extend: function(spec) {
     this.groups.call(each, function(type) {
@@ -117,11 +117,11 @@ var doctype = {
     this.attrs.call(each, function(type) {
       spec.attrs[type] = combineArrays(this, spec.attrs[type]);
     });
-    spec.rules = spec.rules || {};
-    this.rules.call(each, function(name) {
-      spec.rules[name] = combineArrays(this, spec.rules[name]);
+    spec.rulesets = spec.rulesets || {};
+    this.rulesets.call(each, function(name) {
+      spec.rulesets[name] = combineArrays(this, spec.rulesets[name]);
     });
-    spec.call(addAttributes, ['extend','compute','validate','rule_logic'], this);
+    spec.call(addAttributes, ['extend','compute','validate','rules'], this);
     return spec;
   },
   
@@ -143,7 +143,7 @@ var doctype = {
       });
     });
     
-    this.rules.call(each, function() {
+    this.rulesets.call(each, function() {
       this.call(map, function() {
         this.call(each, function(type, rule) {
           rule[type] = this.call(expandList, groups.tags);
@@ -156,11 +156,11 @@ var doctype = {
     var doctype = this;
     errors = [];
     console.log(doctype.rules);
-    doctype.rules.rules.call(each, function(name) {
+    doctype.rule_logic.rules.call(each, function(name) {
       var rule = this;
-      doctype.rules.sets[name].call(map, function() {
+      doctype.rule_logic.rules.sets[name].call(map, function() {
         var set = this;
-        errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rules.messages[name], set); }));
+        errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rule_logic.messages[name], set); }));
       });
     });
     return errors;
@@ -219,7 +219,7 @@ var doctype = {
   }
 };
 
-var HTMLParser = function(html, handler, doctype) {
+var htmlParser = function(html, doctype, handler) {
   var startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
   var endTag = /^<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
@@ -240,7 +240,7 @@ var HTMLParser = function(html, handler, doctype) {
         attrs.push({
           name: name,
           value: value,
-          escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') 
+          escaped: value.replace(/(^|[^\\])"/g, '$1\\\"')
         });
       });
       if (handler.start) handler.start(tag, tagName, attrs, unary);
@@ -311,14 +311,45 @@ var HTMLParser = function(html, handler, doctype) {
   parseEndTag();
 };
 
-/*
-var doc = {name: 'root', children: [], all: []};
-var line = 1;
-var character = 1;
-var current = doc;
+var spec = new html_401_spec(doctype);
+spec.compute();
+console.log(spec);
 
-HTMLParser(
-  "<html>\r\n"+
+
+
+var parse = function(html, doctype) {
+  var document = {name: 'root', children: [], all: []};
+  var current = document;
+  var line = character = 1;
+  htmlParser(html, doctype, {
+    start: function(html, tag, attrs, unary) {
+      var tag = {name: tag, attrs: attrs, parent: current};
+      if (unary) tag.unary = true;
+      else tag.children = [];
+      tag.line = line;
+      line += (html.match(/(\r\n|\n|\r)/g) || []).length;
+      current.children.push(tag);
+      document.all.push(tag);
+      if (!unary) current = tag;
+    },
+    end: function(html, tag, real) {
+      if (real) current.closed = true;
+      current = current.parent;
+      line += (html.match(/(\r\n|\n|\r)/g) || []).length;
+    },
+    chars: function(text) {
+      current.children.push({text: text, line: line});
+      line += (text.match(/(\r\n|\n|\r)/g) || []).length;
+    },
+    comment: function(html, text) {
+      current.children.push({comment: text, line: line});
+      line += (html.match(/(\r\n|\n|\r)/g) || []).length;
+    }
+  });
+  return document;
+};
+
+var html = "<html>\r\n"+
   "  <head>\r\n"+
   "    <title> Hi!</title>\r\n"+
   "  </head>\r\n"+
@@ -328,36 +359,9 @@ HTMLParser(
   "    <!--<p>Banana &</p>-->\n"+
   "    <div><img src='a' alt='a'></div>\n"+
   "  </body>\n"+
-  "</html>", {
-  start: function(html, tag, attrs, unary) {
-    var newCurrent = {name: tag, attrs: attrs, parent: current};
-    if (unary) newCurrent.unary = true;
-    else newCurrent.children = [];
-    newCurrent.line = line;
-    line += (html.match(/(\r\n|\n|\r)/g) || []).length;
-    current.children.push(newCurrent);
-    doc.all.push(newCurrent);
-    if (!unary) current = newCurrent;
-  },
-  end: function(html, tag, real) {
-    if (real) current.closed = true;
-    current = current.parent;
-    line += (html.match(/(\r\n|\n|\r)/g) || []).length;
-  },
-  chars: function(text) {
-    current.children.push({text: text, line: line});
-    line += (text.match(/(\r\n|\n|\r)/g) || []).length;
-  },
-  comment: function(html, text) {
-    current.children.push({comment: text, line: line});
-    line += (html.match(/(\r\n|\n|\r)/g) || []).length;
-  }
-}, strict);
-*/
+  "</html>";
 
-var spec = new html_401_spec(doctype);
-spec.transitional.compute();
-console.log(spec);
+console.log(parse(html, spec.transitional));
 
 //strict.compute();
 //console.log(strict(doctype));

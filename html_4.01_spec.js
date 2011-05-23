@@ -1,4 +1,9 @@
 var html_401_spec = function(doctype) {
+  this.compute = function() {
+    this.strict.compute();
+    this.transitional.compute();
+    this.frameset.compute();
+  };
   this.strict = doctype.extend({
     groups: {
       tags: {
@@ -118,7 +123,7 @@ var html_401_spec = function(doctype) {
         {attrs: 'width', include: 'col,colgroup', values: '#multi_length'}
       ]
     },
-    rules: {
+    rulesets: {
       allowed_children: [
         {tags: 'a,address,bdo,caption,dd,font_style,heading,legend,phrase,p,pre,q,span,sub,sup', children: 'inline'},
         {tags: 'b,blockquote,body,form', children: 'block,script'},
@@ -242,7 +247,7 @@ var html_401_spec = function(doctype) {
         {attrs: 'noresize', include: 'frame', values: '#self'}
       ]
     },
-    rules: {
+    rulesets: {
       exact_children: [{tags: 'noframes', children: 'noframes_content'}],
       banned_descendents: [{tags: 'noframes', banned: 'noframes'}],
       requires_one_child_from: [{tags: 'frameset', child: 'frameset,frame'}],
