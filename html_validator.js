@@ -74,6 +74,14 @@ var merge = function(b) {
   return this;
 };
 
+var clone = function() {
+  var obj = {};
+  this.call(each, function(name) {
+    obj[name] = this;
+  });
+  return obj;
+};
+
 var makeMap = function() {
   var array = this.split(",");
   var obj = {};
@@ -125,7 +133,7 @@ var doctype = {
     });
     spec.rulesets = spec.rulesets || {};
     this.rulesets.call(each, function(name) {
-      spec.rulesets[name] = combineArrays(this, spec.rulesets[name]);
+      spec.rulesets[name] = combineArrays(this.call(map, clone), spec.rulesets[name]);
     });
     spec.call(addAttributes, ['extend','compute','validate','rules'], this);
     return spec;
