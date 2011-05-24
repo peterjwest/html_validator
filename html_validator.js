@@ -76,10 +76,10 @@ var clone = function() {
   return obj;
 };
 
-var makeMap = function() {
+var makeMap = function(index) {
   var array = this.split(",");
   var obj = {};
-  for (var i = 0; i < array.length; i++) obj[array[i]] = true;
+  for (var i = 0; i < array.length; i++) obj[array[i]] = index ? i+1: true;
   return obj;
 };
 
@@ -97,9 +97,9 @@ var addAttributes = function(array, b) {
   array.call(map, function() { a[this] = b[this]; }); 
 }
 
-var expandList = function(groups) {
+var expandList = function(groups, index) {
   if (!this.indexOf) return this;
-  var map = this.call(makeMap);
+  var map = this.call(makeMap, index);
   map.call(each, function(name) {
     if (groups[name]) {
       delete map[name];
@@ -153,7 +153,7 @@ var doctype = {
     this.rulesets.call(each, function(name) {
       this.call(map, function() {
         this.call(each, function(type, rule) {
-          rule[type] = this.call(expandList, groups.tags);
+          rule[type] = this.call(expandList, groups.tags, true);
         });
       });
     });
@@ -167,7 +167,7 @@ var doctype = {
         this.tags.call(each, function(name) {
           tags[name][ruleName] = tags[name][ruleName] || {};
           innerTags.call(each, function(childName) {
-            tags[name][ruleName][childName] = true;
+            tags[name][ruleName][childName] = this;
             if (ruleName == "allowed_children" && tags[childName]) {
               tags[childName].allowed_parents = tags[childName].allowed_parents || {};
               tags[childName].allowed_parents[name] = true;
