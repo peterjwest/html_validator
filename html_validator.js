@@ -2,12 +2,6 @@
 //Original parser By John Resig (ejohn.org) http://ejohn.org/blog/pure-javascript-html-parser/
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
-function Clone() { }
-function clone(obj) {
-    Clone.prototype = obj;
-    return new Clone();
-}
-
 Object.prototype.call = function(fn) { 
   var args = Array.prototype.slice.call(arguments); 
   args.shift(); 
@@ -163,7 +157,7 @@ var doctype = {
         });
       });
     });
-    var tags = this.groups.tags.all;
+    var tags = this.tags = this.groups.tags.all.call(clone);
     tags.call(each, function(name) {
       tags[name] = {allowed_children: {}, allowed_parents: {}};
     });
@@ -177,6 +171,13 @@ var doctype = {
       });
     });
   },
+  /*
+  Data needed:
+    - unary (list)
+    - implicit (exact children, ordered children)
+    - cdata tags (script,style)
+    - close optional (list, children, parents)
+  */
   
   validate: function(doc) {
     var doctype = this;
