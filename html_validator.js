@@ -159,25 +159,35 @@ var doctype = {
     });
     var tags = this.tags = this.groups.tags.all.call(clone);
     tags.call(each, function(name) {
-      tags[name] = {allowed_children: {}, allowed_parents: {}};
+      tags[name] = {};
     });
-    this.rulesets.allowed_children.call(map, function(i) {
-      var children = this.children;
-      this.tags.call(each, function(name) {
-        children.call(each, function(childName) {
-          tags[name].allowed_children[childName] = true;
-          if (tags[childName]) tags[childName].allowed_parents[name] = true;
+    this.rulesets.call(each, function(ruleName) {
+      this.call(map, function(i) {
+        var innerTags = this.innerTags;
+        this.tags.call(each, function(name) {
+          tags[name][ruleName] = tags[name][ruleName] || {};
+          innerTags.call(each, function(childName) {
+            tags[name][ruleName][childName] = true;
+            if (ruleName == "allowed_children" && tags[childName]) {
+              tags[childName].allowed_parents = tags[childName].allowed_parents || {};
+              tags[childName].allowed_parents[name] = true;
+            }
+          });
         });
       });
     });
+    var groups = this.groups.tags;
+    ['unary','implicit','close_optional'].call(map, function() {
+      var groupType = this;
+      groups[groupType].call(each, function(name) {
+        if (tags[name].allowed_parents)
+          tags[name].allowed_parents.call(each, function(parentName) {
+            tags[parentName].implicit_children = tags[parentName].implicit_children || {};
+            tags[parentName].implicit_children[name] = true;
+          });
+      });
+    });
   },
-  /*
-  Data needed:
-    - unary (list)
-    - implicit (exact children, ordered children)
-    - cdata tags (script,style)
-    - close optional (list, children, parents)
-  */
   
   validate: function(doc) {
     var doctype = this;

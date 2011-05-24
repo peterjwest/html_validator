@@ -125,49 +125,48 @@ var html_401_spec = function(doctype) {
     },
     rulesets: {
       allowed_children: [
-        {tags: 'a,address,bdo,caption,dd,font_style,heading,legend,phrase,p,pre,q,span,sub,sup', children: 'inline'},
-        {tags: 'b,blockquote,body,form', children: 'block,script'},
-        {tags: 'button,dt,del,ins,div,li,th,td', children: 'flow'},
-        {tags: 'colgroup', children: 'col'},
-        {tags: 'dl', children: 'dt,dd'},
-        {tags: 'fieldset', children: 'flow,legend'},
-        {tags: 'head', children: 'title,base,script,style,meta,link,object'},
-        {tags: 'html', children: 'head,document_body'},
-        {tags: 'option,textarea,title', children: '#pcdata'},
-        {tags: 'list', children: 'li'},
-        {tags: 'map', children: 'block,area'},
-        {tags: 'noscript', children: 'block'},
-        {tags: 'object', children: 'param,flow'},
-        {tags: 'optgroup', children: 'option'},
-        {tags: '#root', children: 'html'},
-        {tags: 'script,style', children: '#cdata'},
-        {tags: 'select', children: 'optgroup,option'},
-        {tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'},
-        {tags: 'thead,tfoot,tbody', children: 'tr'},
-        {tags: 'tr', children: 'td,th'}
+        {tags: 'a,address,bdo,caption,dd,font_style,heading,legend,phrase,p,pre,q,span,sub,sup', innerTags: 'inline'},
+        {tags: 'b,blockquote,body,form', innerTags: 'block,script'},
+        {tags: 'button,dt,del,ins,div,li,th,td', innerTags: 'flow'},
+        {tags: 'colgroup', innerTags: 'col'},
+        {tags: 'dl', innerTags: 'dt,dd'},
+        {tags: 'fieldset', innerTags: 'flow,legend'},
+        {tags: 'head', innerTags: 'title,base,script,style,meta,link,object'},
+        {tags: 'html', innerTags: 'head,document_body'},
+        {tags: 'option,textarea,title', innerTags: '#pcdata'},
+        {tags: 'list', innerTags: 'li'},
+        {tags: 'map', innerTags: 'block,area'},
+        {tags: 'noscript', innerTags: 'block'},
+        {tags: 'object', innerTags: 'param,flow'},
+        {tags: 'optgroup', innerTags: 'option'},
+        {tags: '#root', innerTags: 'html'},
+        {tags: 'script,style', innerTags: '#cdata'},
+        {tags: 'select', innerTags: 'optgroup,option'},
+        {tags: 'table', innerTags: 'caption,col,colgroup,thead,tfoot,tbody'},
+        {tags: 'thead,tfoot,tbody', innerTags: 'tr'},
+        {tags: 'tr', innerTags: 'td,th'}
       ],
-      allowed_descendents: [{tags: 'body', allowed: 'ins,del'}],
+      allowed_descendents: [{tags: 'body', innerTags: 'ins,del'}],
       banned_descendents: [
-        {tags: 'a', banned: 'a'},
-        {tags: 'button', banned: 'form_controls,a,form,fieldset'},
-        {tags: 'form', banned: 'form'},
-        {tags: 'label', banned: 'label'},
-        {tags: 'pre', banned: 'pre_excluded'}
+        {tags: 'a', innerTags: 'a'},
+        {tags: 'button', innerTags: 'form_controls,a,form,fieldset'},
+        {tags: 'form', innerTags: 'form'},
+        {tags: 'label', innerTags: 'label'},
+        {tags: 'pre', innerTags: 'pre_excluded'}
       ],
       exact_children: [
-        {tags: '#root', children: 'html'},
-        {tags: 'html', children: 'head,document_body'}
+        {tags: '#root', innerTags: 'html'},
+        {tags: 'html', innerTags: 'head,document_body'}
       ],
-      exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
-      ordered_children: [{tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'}],
-      required_first_child: [{tags: 'fieldset', child: 'legend'}],
+      exclusive_children: [{tags: 'table', innerTags: 'col,colgroup'}],
+      ordered_children: [{tags: 'table', innerTags: 'caption,col,colgroup,thead,tfoot,tbody'}],
+      required_first_child: [{tags: 'fieldset', innerTags: 'legend'}],
       required_children: [
-        {tags: 'head', child: 'title'},
-        {tags: 'table', child: 'tbody'}
+        {tags: 'head', innerTags: 'title'}
       ],
       unique_children: [
-        {tags: 'head', unique: 'title,base'},
-        {tags: 'fieldset', unique: 'legend'}
+        {tags: 'head', innerTags: 'title,base'},
+        {tags: 'fieldset', innerTags: 'legend'}
       ]
     } 
   });
@@ -251,10 +250,11 @@ var html_401_spec = function(doctype) {
       ]
     },
     rulesets: {
-      exact_children: [{tags: 'noframes', children: 'noframes_content'}],
-      banned_descendents: [{tags: 'noframes', banned: 'noframes'}],
-      required_either_child: [{tags: 'frameset', child: 'frameset,frame'}],
-      allowed_children: [{tags: 'frameset', children: 'frame,frameset,noframes'}]
+      allowed_children: [{tags: 'frameset', innerTags: 'frame,frameset,noframes'}],
+      allowed_children: [{tags: 'noframes', innerTags: 'noframes_content'}],
+      banned_descendents: [{tags: 'noframes', innerTags: 'noframes'}],
+      exact_children: [{tags: 'noframes', innerTags: 'noframes_content'}],
+      required_either_child: [{tags: 'frameset', innerTags: 'frameset,frame'}]
     }
   });
 };
