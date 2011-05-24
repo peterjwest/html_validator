@@ -7,7 +7,7 @@ var html_401_spec = function(doctype) {
   this.strict = doctype.extend({
     groups: {
       tags: {
-        all: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
+        all: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,#root,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
         block: 'heading,pre,p,dl,div,noscript,blockquote,form,hr,table,fieldset,address',
         close_optional: 'body,colgroup,dd,dt,head,html,li,option,p,tbody,td,tfoot,th,thead,tr',
         document_body: 'body',
@@ -132,12 +132,14 @@ var html_401_spec = function(doctype) {
         {tags: 'dl', children: 'dt,dd'},
         {tags: 'fieldset', children: 'flow,legend'},
         {tags: 'head', children: 'title,base,script,style,meta,link,object'},
+        {tags: 'html', children: 'head,document_body'},
         {tags: 'option,textarea,title', children: '#pcdata'},
         {tags: 'list', children: 'li'},
         {tags: 'map', children: 'block,area'},
         {tags: 'noscript', children: 'block'},
         {tags: 'object', children: 'param,flow'},
         {tags: 'optgroup', children: 'option'},
+        {tags: '#root', children: 'html'},
         {tags: 'script,style', children: '#cdata'},
         {tags: 'select', children: 'optgroup,option'},
         {tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'},
@@ -153,7 +155,7 @@ var html_401_spec = function(doctype) {
         {tags: 'pre', banned: 'pre_excluded'}
       ],
       exact_children: [
-        {tags: 'root', children: 'html'},
+        {tags: '#root', children: 'html'},
         {tags: 'html', children: 'head,document_body'}
       ],
       exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
@@ -169,7 +171,7 @@ var html_401_spec = function(doctype) {
       ]
     } 
   });
-
+  
   this.transitional = this.strict.extend({
     groups: {
       tags: {

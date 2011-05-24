@@ -2,6 +2,12 @@
 //Original parser By John Resig (ejohn.org) http://ejohn.org/blog/pure-javascript-html-parser/
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
+function Clone() { }
+function clone(obj) {
+    Clone.prototype = obj;
+    return new Clone();
+}
+
 Object.prototype.call = function(fn) { 
   var args = Array.prototype.slice.call(arguments); 
   args.shift(); 
@@ -41,7 +47,7 @@ var select = function(fn) {
 
 var sum = function(){
   for (var i = 0, sum = 0; i < this.length; i++) sum += this[i];
-	return sum;
+  return sum;
 }
 
 var values = function() {
@@ -82,7 +88,7 @@ var englishList = function(separator) {
 var descendents = function(fn) { if (this.children) this.children.call(map, fn); };
 var prepend = function(string) { return string + this; };
 var inTag = function() { return "<"+this+">"; };
-var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a; };
+var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
 var combineArrays = function(a,b) { return (a || []).concat(b || []); }
 var addAttributes = function(array, b) { 
   var a = this;
@@ -142,11 +148,23 @@ var doctype = {
         if (this.exclude) this.exclude = this.exclude.call(expandList, groups.tags);
       });
     });
-    
-    this.rulesets.call(each, function() {
+    this.rulesets.call(each, function(name) {
       this.call(map, function() {
         this.call(each, function(type, rule) {
           rule[type] = this.call(expandList, groups.tags);
+        });
+      });
+    });
+    var tags = this.groups.tags.all;
+    tags.call(each, function(name) {
+      tags[name] = {allowed_children: {}, allowed_parents: {}};
+    });
+    this.rulesets.allowed_children.call(map, function(i) {
+      var children = this.children;
+      this.tags.call(each, function(name) {
+        children.call(each, function(childName) {
+          tags[name].allowed_children[childName] = true;
+          if (tags[childName]) tags[childName].allowed_parents[name] = true;
         });
       });
     });
@@ -227,42 +245,38 @@ var htmlParser = function(html, doctype, handler) {
   stack.last = function() { return this[this.length - 1]; };
 
   var parseStartTag = function(tag, tagName, rest, unary) {
-    if (doctype.tags.block[tagName]) {
-      while (stack.last() && doctype.tags.inline[stack.last()]) parseEndTag("", stack.last());
-    }
+  //if block close all tags which are inline
+    if (doctype.tags.block[tagName])
+      while (stack.last() && doctype.tags.inline[stack.last()]) 
+    parseEndTag("", stack.last());
     if (doctype.tags.unclosable[tagName] && stack.last() == tagName) parseEndTag("", tagName);
     unary = doctype.tags.unary[tagName] || !!unary;
     if (!unary) stack.push(tagName);
     if (handler.start) {
       var attrs = [];
       rest.replace(attr, function(match, name) {
-        var value = arguments[2] ? arguments[2] : arguments[3] ? arguments[3] : arguments[4] ? arguments[4] : fillAttrs[name] ? name : "";
+        var value = arguments[2] || arguments[3] || arguments[4] || (fillAttrs[name] ? name : "");
         attrs.push({
           name: name,
           value: value,
           escaped: value.replace(/(^|[^\\])"/g, '$1\\\"')
         });
       });
-      if (handler.start) handler.start(tag, tagName, attrs, unary);
+      handler.start(tag, tagName, attrs, unary);
     }
-  }
+  };
 
   var parseEndTag = function(tag, tagName) {
-    // If no tag name is provided, clean shop
     if (!tagName) var pos = 0;
-    // Find the closest opened tag of the same type
     else 
-      for (var pos = stack.length - 1; pos >= 0; pos--) 
+      for (var pos = stack.length - 1; pos >= 0; pos--)
         if (stack[pos] == tagName) break;
     if (pos >= 0) {
-      // Close all the open elements, up the stack
-      for (var i = stack.length - 1; i >= pos; i--) {
+      for (var i = stack.length - 1; i >= pos; i--)
         if (handler.end) handler.end("", stack[i], i == pos);
-      }
-      // Remove the open elements from the stack
       stack.length = pos;
     }
-  }
+  };
   
   while (html) {
     chars = true;
@@ -311,16 +325,11 @@ var htmlParser = function(html, doctype, handler) {
   parseEndTag();
 };
 
-var spec = new html_401_spec(doctype);
-spec.compute();
-console.log(spec);
-
-
-
 var parse = function(html, doctype) {
-  var document = {name: 'root', children: [], all: []};
+  var document = {name: '#root', children: [], all: []};
   var current = document;
-  var line = character = 1;
+  var line = 1;
+  var character = 1;
   htmlParser(html, doctype, {
     start: function(html, tag, attrs, unary) {
       var tag = {name: tag, attrs: attrs, parent: current};
@@ -361,12 +370,10 @@ var html = "<html>\r\n"+
   "  </body>\n"+
   "</html>";
 
-console.log(parse(html, spec.transitional));
-
-//strict.compute();
-//console.log(strict(doctype));
-//console.log(strict.validate(doc));
-//console.log(doc);
+var spec = new html_401_spec(doctype);
+spec.compute();
+console.log(spec);
+//console.log(parse(html, spec.transitional));
 
 /*
 //html must have xmlns=http://www.w3.org/1999/xhtml
