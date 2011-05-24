@@ -161,7 +161,7 @@ var html_401_spec = function(doctype) {
       exclusive_children: [{tags: 'table', children: 'col,colgroup'}],
       ordered_children: [{tags: 'table', children: 'caption,col,colgroup,thead,tfoot,tbody'}],
       required_first_child: [{tags: 'fieldset', child: 'legend'}],
-      requires_one_child_from: [
+      required_children: [
         {tags: 'head', child: 'title'},
         {tags: 'table', child: 'tbody'}
       ],
@@ -239,6 +239,7 @@ var html_401_spec = function(doctype) {
         all: '+frame,frameset',
         document_body: 'frameset',
         frame_elements: '+frame',
+        implicit: '+frameset',
         noframes_content: 'body',
         unary: '+frame'
       }
@@ -252,7 +253,7 @@ var html_401_spec = function(doctype) {
     rulesets: {
       exact_children: [{tags: 'noframes', children: 'noframes_content'}],
       banned_descendents: [{tags: 'noframes', banned: 'noframes'}],
-      requires_one_child_from: [{tags: 'frameset', child: 'frameset,frame'}],
+      required_either_child: [{tags: 'frameset', child: 'frameset,frame'}],
       allowed_children: [{tags: 'frameset', children: 'frame,frameset,noframes'}]
     }
   });
