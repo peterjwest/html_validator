@@ -76,10 +76,10 @@ var clone = function() {
   return obj;
 };
 
-var makeMap = function(index) {
+var makeMap = function() {
   var array = this.split(",");
   var obj = {};
-  for (var i = 0; i < array.length; i++) obj[array[i]] = index ? i+1: true;
+  for (var i = 0; i < array.length; i++) obj[array[i]] = i+1;
   return obj;
 };
 
@@ -97,13 +97,14 @@ var addAttributes = function(array, b) {
   array.call(map, function() { a[this] = b[this]; }); 
 }
 
-var expandList = function(groups, index) {
+var expandList = function(groups) {
   if (!this.indexOf) return this;
-  var map = this.call(makeMap, index);
+  var map = this.call(makeMap);
   map.call(each, function(name) {
+    var value = this;
     if (groups[name]) {
       delete map[name];
-      map.call(merge, groups[name].call(expandList, groups));
+      map.call(merge, groups[name].call(expandList, groups).call(each, function(tag, group) { group[tag] = value; }));
     }
   });
   return map;
@@ -176,16 +177,14 @@ var doctype = {
         });
       });
     });
-    var groups = this.groups.tags;
-    ['unary','implicit','close_optional'].call(map, function() {
-      var groupType = this;
-      groups[groupType].call(each, function(name) {
-        if (tags[name].allowed_parents)
-          tags[name].allowed_parents.call(each, function(parentName) {
-            tags[parentName].implicit_children = tags[parentName].implicit_children || {};
-            tags[parentName].implicit_children[name] = true;
-          });
-      });
+
+    this.groups.tags.implicit.call(each, function(name) {
+      if (tags[name].allowed_parents) {
+        tags[name].allowed_parents.call(each, function(parentName) {
+          tags[parentName].implicit_children = tags[parentName].implicit_children || {};
+          tags[parentName].implicit_children[name] = true;
+        });
+      }
     });
   },
   
@@ -210,6 +209,9 @@ var doctype = {
       multi_length: /^\s*[0-9]+[%*]?\s*/,
       name: /^\s*[a-z][a-z0-9-_:.]*\s*$/i,
       names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
+    },
+    ordered: {
+      
     },
     rules: {
       unique: function(set, document) {
@@ -264,10 +266,10 @@ var htmlParser = function(html, doctype, handler) {
   stack.last = function() { return this[this.length - 1]; };
 
   var parseStartTag = function(tag, tagName, rest, unary) {
-  //if block close all tags which are inline
-    if (doctype.tags.block[tagName])
-      while (stack.last() && doctype.tags.inline[stack.last()]) 
-    parseEndTag("", stack.last());
+    //if block close all tags which are inline
+    //  if (doctype.tags.block[tagName])
+    //    while (stack.last() && doctype.tags.inline[stack.last()]) 
+    //      parseEndTag("", stack.last());
     if (doctype.tags.unclosable[tagName] && stack.last() == tagName) parseEndTag("", tagName);
     unary = doctype.tags.unary[tagName] || !!unary;
     if (!unary) stack.push(tagName);
@@ -275,11 +277,7 @@ var htmlParser = function(html, doctype, handler) {
       var attrs = [];
       rest.replace(attr, function(match, name) {
         var value = arguments[2] || arguments[3] || arguments[4] || (fillAttrs[name] ? name : "");
-        attrs.push({
-          name: name,
-          value: value,
-          escaped: value.replace(/(^|[^\\])"/g, '$1\\\"')
-        });
+        attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
       });
       handler.start(tag, tagName, attrs, unary);
     }
