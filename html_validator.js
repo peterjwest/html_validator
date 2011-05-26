@@ -275,9 +275,10 @@ var htmlParser = function(html, doctype, handler) {
   var index, chars, match, stack = [], last = html;
   stack.last = function() { return this[this.length - 1]; };
 
+  //need to allow for children from implicit tags
   var parseStartTag = function(tag, tagName, rest, selfClosed) {
     if (doctype.groups.tags.close_optional[stack.last()]) {
-      if (!doctype.tags[stack.last()].allowed_children[tagName]) parseEndTag("", tagName);
+      if (!doctype.tags[stack.last()].allowed_children[tagName]) parseEndTag("", stack.last());
     }
     
     //abstract for xhtml
@@ -293,19 +294,21 @@ var htmlParser = function(html, doctype, handler) {
   };
 
   var parseEndTag = function(tag, tagName) {
-    if (!tagName) var pos = 0;
-    else 
-      for (var pos = stack.length - 1; pos >= 0; pos--)
-        if (stack[pos] == tagName) break;
+    if (tagName) { for (var pos = stack.length - 1; pos >= 0; pos--) if (stack[pos] == tagName) break; }
+    else { var pos = 0; }
     if (pos >= 0) {
-      for (var i = stack.length - 1; i >= pos; i--) handler.end("", stack[i], i == pos);
+      for (var i = stack.length - 1; i >= pos; i--) handler.end(tag, tagName, i == pos, true);
       stack.length = pos;
+    }
+    else if (tagName) {
+      handler.end(tag, tagName, true, false);
     }
   };
   
   while (html) {
     chars = true;
     if (stack.last() && doctype.groups.tags.cdata_elements[stack.last()]) {
+      //check out end of this regex [^>]* ???
       html = html.replace(new RegExp("(.*)<\/" + stack.last() + "[^>]*>"), function(all, text){
         //need more robust solution, and logging of whether cdata tag is used
         text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
@@ -336,7 +339,7 @@ var htmlParser = function(html, doctype, handler) {
     if (html == last) throw "Parse Error: " + html;
     last = html;
   }
-  parseEndTag();
+  parseEndTag("");
 };
 
 var parse = function(html, doctype) {
@@ -357,9 +360,14 @@ var parse = function(html, doctype) {
       document.all.push(tag);
       if (!unary) current = tag;
     },
-    end: function(html, tag, real) {
-      if (real) current.closed = true;
-      current = current.parent;
+    end: function(html, tag, real, started) {
+      if (started) {
+        if (real) current.closed = true;
+        current = current.parent;
+      }
+      else {
+        //console.log("unstarted "+tag);
+      }
       line += html.call(newlines);
     },
     chars: function(text) {
@@ -375,12 +383,11 @@ var parse = function(html, doctype) {
 };
 
 var html = "<html>\r\n"+
-  "  <head>\r\n"+
+  "    <head>"+
   "    <title> Hi!</title>\r\n"+
-  "  </head>\r\n"+
-  "  <body class='foo' id=\"bar\">\n"+
-  "    <table><tr><td><p>hi!"+
-  "  </body>\n"+
+  "    </head>"+
+  "    <body>"+
+  "    <table><tr><td><p>hi</tbody></table>"+
   "</html>";
 
 var spec = new html_401_spec(doctype);
