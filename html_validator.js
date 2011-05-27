@@ -18,15 +18,11 @@ var each = function(fn) {
 };
 
 var map = function(fn) {
-  if (typeof(fn) == 'string') { 
-    var attribute = fn;
-    fn = function() {
-      return this[attribute];
-    }
-  }
+  if (typeof(fn) == 'string') 
+    var attrFn = function() { return this[fn]; };
   var array = [];
   for (var i = 0; i < this.length; i++) {
-    if (this[i]) array.push(this[i].call(fn, i));
+    if (this[i]) array.push(this[i].call(attrFn || fn, i));
   }
   return array;
 };
@@ -87,7 +83,7 @@ var draw = function(indent) {
   if (this.name) {
    text += (indent||"")+"<"+this.name+">\n";
    if (this.children) text += this.children.call(map, function() { return this.call(draw, (indent||"")+"  "); }).join("");
-   text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "<!--/"+this.name+"-->\n");
+   text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "{</"+this.name+">}\n");
   }
   return text;
 };
@@ -272,16 +268,15 @@ var htmlParser = function(html, doctype) {
   var endTag = /^<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
   var doc = {name: '#root', children: [], all: []};
-  var index, match, line = 1, last = html, current = doc;
+  var index, match, endedTag, line = 1, last = html, current = doc;
   var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
-  var stack = function() { return this.parent ? this.parent.call(stack).concat([this.name]) : [this.name]; };
-  var depth = function(tag) { return current.call(stack).call(makeMap)[tag] - 1; }
+  var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
+  var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; }
 
   //need to allow for children from implicit tags
   var parseStartTag = function(html, tag, rest, selfClosed) {
-    if (doctype.groups.tags.close_optional[current]) {
+    if (doctype.groups.tags.close_optional[current])
       if (!doctype.tags[current].allowed_children[tag]) parseEndTag("", current);
-    }
     
     //abstract for xhtml
     var unary = doctype.groups.tags.unary[tag] || selfClosed;
@@ -299,14 +294,14 @@ var htmlParser = function(html, doctype) {
   };
   
   var parseEndTag = function(html, tag) {
-    var pos = tag ? current.call(depth, tag) : 0;
-    if (pos >= 0) {
-      for (var i = current.call(stack).length - 1; i >= pos; i--) {
-        if (i == pos) current.closed = true;
-        current = current.parent;
-        line += html.call(newlines);
-      }
+    if (endedTag = current.call(stack)[tag ? current.call(depth, tag) : 0]) {
+      endedTag.closed = true;
+      current = endedTag.parent;
     }
+    else {
+      //unexpected unopened tag
+    }
+    line += html.call(newlines);
   };
  
   while (html) {
@@ -335,9 +330,11 @@ var htmlParser = function(html, doctype) {
       match[0].replace(startTag, parseStartTag);
     }
     else {
+      //this bit can't handle less than symbol
       index = html.indexOf("<");
-      current.children.push({text: index < 0 ? html : html.substring(0, index), line: line});
-      line += html.call(newlines);
+      var text = index < 0 ? html : html.substring(0, index);
+      current.children.push({text: text, line: line});
+      line += text.call(newlines);
       html = index < 0 ? "" : html.substring(index);
     }
     if (html == last) throw "Parse Error: " + html;
@@ -349,10 +346,10 @@ var htmlParser = function(html, doctype) {
 
 var html = "<html>\r\n"+
   "    <head>"+
-  "    <title> Hi!</title>\r\n"+
-  "    </head>"+
-  "    <body>"+
-  "    <table><tr><td><p>hi</tbody></table>"+
+  "    <title> Hi!\r\n"+
+  "    </head>\n"+
+  "    <body>\n"+
+  "    <table><tr>\n<td><p\n> dsad sads adsa dhi</tbody></table>\n"+
   "</html>";
   
 var spec = new html_401_spec(doctype);
