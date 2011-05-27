@@ -268,117 +268,91 @@ var doctype = {
   }
 };
 
-var htmlParser = function(html, doctype, handler) {
+var htmlParser = function(html, doctype) {
   var startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
   var endTag = /^<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
-  var index, chars, match, stack = [], last = html;
+  var index, match, stack = [], last = html;
+  var document = {name: '#root', children: [], all: []};
+  var current = document;
+  var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
+  var line = 1;
   stack.last = function() { return this[this.length - 1]; };
 
   //need to allow for children from implicit tags
-  var parseStartTag = function(tag, tagName, rest, selfClosed) {
+  var parseStartTag = function(html, tag, rest, selfClosed) {
     if (doctype.groups.tags.close_optional[stack.last()]) {
-      if (!doctype.tags[stack.last()].allowed_children[tagName]) parseEndTag("", stack.last());
+      if (!doctype.tags[stack.last()].allowed_children[tag]) parseEndTag("", stack.last());
     }
     
     //abstract for xhtml
-    var unary = doctype.groups.tags.unary[tagName] || selfClosed;
-    if (!unary) stack.push(tagName);
+    var unary = doctype.groups.tags.unary[tag] || selfClosed;
+    if (!unary) stack.push(tag);
     
     var attrs = [];
     rest.replace(attr, function(match, name) {
       var value = arguments[2] || arguments[3] || arguments[4] || (fillAttrs[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
-    handler.start(tag, tagName, attrs, unary);
-  };
-
-  var parseEndTag = function(tag, tagName) {
-    if (tagName) { for (var pos = stack.length - 1; pos >= 0; pos--) if (stack[pos] == tagName) break; }
-    else { var pos = 0; }
-    if (pos >= 0) {
-      for (var i = stack.length - 1; i >= pos; i--) handler.end(tag, tagName, i == pos, true);
-      stack.length = pos;
-    }
-    else if (tagName) {
-      handler.end(tag, tagName, true, false);
-    }
+    var tag = {name: tag, attrs: attrs, parent: current, unary: unary, children: [], line: line};
+    line += html.call(newlines);
+    current.children.push(tag);
+    document.all.push(tag);
+    if (!unary) current = tag;
   };
   
+  var parseEndTag = function(html, tag) {
+    if (tag) { for (var pos = stack.length - 1; pos >= 0; pos--) if (stack[pos] == tag) break; }
+    else { var pos = 0; }
+    if (pos >= 0) {
+      for (var i = stack.length - 1; i >= pos; i--) {
+        if (i == pos) current.closed = true;
+        current = current.parent;
+        line += html.call(newlines);   
+      }
+      stack.length = pos;
+    }
+    else if (tag) {
+      //unstarted tag do something
+      line += html.call(newlines);
+    }
+  };
+ 
   while (html) {
-    chars = true;
     if (stack.last() && doctype.groups.tags.cdata_elements[stack.last()]) {
       //check out end of this regex [^>]* ???
       html = html.replace(new RegExp("(.*)<\/" + stack.last() + "[^>]*>"), function(all, text){
         //need more robust solution, and logging of whether cdata tag is used
         text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
-        handler.chars(text);
+        current.children.push({text: text, line: line});
+        line += html.call(newlines);
         return "";
       });
       parseEndTag("", stack.last());
     } 
+    else if (html.indexOf("<!--") == 0 && (index = html.indexOf("-->")) >= 0) {
+      current.children.push({comment: html.substring(4, index), line: line});
+      line += html.substring(4, index).call(newlines);
+      html = html.substring(index + 3);
+    } 
+    else if (html.indexOf("</") == 0 && (match = html.match(endTag))) {
+      html = html.substring(match[0].length);
+      match[0].replace(endTag, parseEndTag);
+    } 
+    else if (html.indexOf("<") == 0 && (match = html.match(startTag))) {
+      html = html.substring(match[0].length);
+      match[0].replace(startTag, parseStartTag);
+    }
     else {
-      if (html.indexOf("<!--") == 0 && (index = html.indexOf("-->")) >= 0) {
-        handler.comment(html.substring(0, index+3), html.substring(4, index));
-        html = html.substring(index + 3);
-      } 
-      else if (html.indexOf("</") == 0 && (match = html.match(endTag))) {
-        html = html.substring(match[0].length);
-        match[0].replace(endTag, parseEndTag);
-      } 
-      else if (html.indexOf("<") == 0 && (match = html.match(startTag))) {
-        html = html.substring(match[0].length);
-        match[0].replace(startTag, parseStartTag);
-      }
-      else {
-        index = html.indexOf("<");
-        handler.chars(index < 0 ? html : html.substring(0, index));
-        html = index < 0 ? "" : html.substring(index);
-      }
+      index = html.indexOf("<");
+      current.children.push({text: index < 0 ? html : html.substring(0, index), line: line});
+      line += html.call(newlines);
+      html = index < 0 ? "" : html.substring(index);
     }
     if (html == last) throw "Parse Error: " + html;
     last = html;
   }
   parseEndTag("");
-};
-
-var parse = function(html, doctype) {
-  var document = {name: '#root', children: [], all: []};
-  var current = document;
-  var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
-  var line = 1;
-  var character = 1;
-  
-  htmlParser(html, doctype, {
-    start: function(html, tag, attrs, unary) {
-      var tag = {name: tag, attrs: attrs, parent: current};
-      if (unary) tag.unary = true;
-      else tag.children = [];
-      tag.line = line;
-      line += html.call(newlines);
-      current.children.push(tag);
-      document.all.push(tag);
-      if (!unary) current = tag;
-    },
-    end: function(html, tag, real, started) {
-      if (started) {
-        if (real) current.closed = true;
-        current = current.parent;
-      }
-      else {
-        //console.log("unstarted "+tag);
-      }
-      line += html.call(newlines);
-    },
-    chars: function(text) {
-      current.children.push({text: text, line: line});
-      line += html.call(newlines);
-    },
-    comment: function(html, text) {
-      current.children.push({comment: text, line: line});
-      line += html.call(newlines);
-    }
-  });
   return document;
 };
 
@@ -393,6 +367,6 @@ var html = "<html>\r\n"+
 var spec = new html_401_spec(doctype);
 spec.compute();
 console.log(spec);
-var tree = parse(html, spec.transitional);
+var tree = htmlParser(html, spec.transitional);
 console.log(tree);
 console.log(tree.call(draw));
