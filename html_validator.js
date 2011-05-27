@@ -77,9 +77,8 @@ var clone = function() {
 };
 
 var makeMap = function() {
-  var array = this.split(",");
   var obj = {};
-  for (var i = 0; i < array.length; i++) obj[array[i]] = i+1;
+  this.call(map, function(i) { obj[this] = i+1 });
   return obj;
 };
 
@@ -88,7 +87,7 @@ var draw = function(indent) {
   if (this.name) {
    text += (indent||"")+"<"+this.name+">\n";
    if (this.children) text += this.children.call(map, function() { return this.call(draw, (indent||"")+"  "); }).join("");
-   text += (indent||"")+"</"+this.name+">\n";
+   text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "<!--/"+this.name+"-->\n");
   }
   return text;
 };
@@ -109,7 +108,7 @@ var addAttributes = function(array, b) {
 
 var expandList = function(groups) {
   if (!this.indexOf) return this;
-  var map = this.call(makeMap);
+  var map = this.split(",").call(makeMap);
   map.call(each, function(name) {
     var value = this;
     if (groups[name]) {
@@ -224,9 +223,9 @@ var doctype = {
       
     },
     rules: {
-      unique: function(set, document) {
+      unique: function(set, doc) {
         var matches = {};
-        document.all.call(map, function() {
+        doc.all.call(map, function() {
           var tag = this;
           set.tags.call(each, function(name) {
             matches[name] = matches[name] || {name: name, tags: []};
@@ -236,18 +235,18 @@ var doctype = {
         return matches.call(values).call(select, function() { return this.tags.length > 1; });
       },
       
-      not_empty: function(set, document) { 
+      not_empty: function(set, doc) { 
         var matches = [];
-        document.all.call(map, function() {
+        doc.all.call(map, function() {
           if (set.tags[this.name] && (this.unary || this.children.call(select, function() { return this.name; }).length == 0))
             matches.push(this);
         });
         return matches;
       },
       
-      has_parent: function(set, document) {
+      has_parent: function(set, doc) {
         var matches = [];
-        document.all.call(map, function() {
+        doc.all.call(map, function() {
           if (set.tags[this.name] && (!this.parent || !set.parents[this.parent.name])) matches.push(this);
         });
         return matches;
@@ -272,63 +271,55 @@ var htmlParser = function(html, doctype) {
   var startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
   var endTag = /^<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
-  var index, match, stack = [], last = html;
-  var document = {name: '#root', children: [], all: []};
-  var current = document;
+  var doc = {name: '#root', children: [], all: []};
+  var index, match, line = 1, last = html, current = doc;
   var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
-  var line = 1;
-  stack.last = function() { return this[this.length - 1]; };
+  var stack = function() { return this.parent ? this.parent.call(stack).concat([this.name]) : [this.name]; };
+  var depth = function(tag) { return current.call(stack).call(makeMap)[tag] - 1; }
 
   //need to allow for children from implicit tags
   var parseStartTag = function(html, tag, rest, selfClosed) {
-    if (doctype.groups.tags.close_optional[stack.last()]) {
-      if (!doctype.tags[stack.last()].allowed_children[tag]) parseEndTag("", stack.last());
+    if (doctype.groups.tags.close_optional[current]) {
+      if (!doctype.tags[current].allowed_children[tag]) parseEndTag("", current);
     }
     
     //abstract for xhtml
     var unary = doctype.groups.tags.unary[tag] || selfClosed;
-    if (!unary) stack.push(tag);
     
     var attrs = [];
     rest.replace(attr, function(match, name) {
-      var value = arguments[2] || arguments[3] || arguments[4] || (fillAttrs[name] ? name : "");
+      var value = arguments[2] || arguments[3] || arguments[4] || (doctype.groups.attrs.self_value[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
     var tag = {name: tag, attrs: attrs, parent: current, unary: unary, children: [], line: line};
     line += html.call(newlines);
     current.children.push(tag);
-    document.all.push(tag);
+    doc.all.push(tag);
     if (!unary) current = tag;
   };
   
   var parseEndTag = function(html, tag) {
-    if (tag) { for (var pos = stack.length - 1; pos >= 0; pos--) if (stack[pos] == tag) break; }
-    else { var pos = 0; }
+    var pos = tag ? current.call(depth, tag) : 0;
     if (pos >= 0) {
-      for (var i = stack.length - 1; i >= pos; i--) {
+      for (var i = current.call(stack).length - 1; i >= pos; i--) {
         if (i == pos) current.closed = true;
         current = current.parent;
-        line += html.call(newlines);   
+        line += html.call(newlines);
       }
-      stack.length = pos;
-    }
-    else if (tag) {
-      //unstarted tag do something
-      line += html.call(newlines);
     }
   };
  
   while (html) {
-    if (stack.last() && doctype.groups.tags.cdata_elements[stack.last()]) {
+    if (current && doctype.groups.tags.cdata_elements[current]) {
       //check out end of this regex [^>]* ???
-      html = html.replace(new RegExp("(.*)<\/" + stack.last() + "[^>]*>"), function(all, text){
+      html = html.replace(new RegExp("(.*)<\/"+current+"[^>]*>"), function(all, text){
         //need more robust solution, and logging of whether cdata tag is used
         text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
         current.children.push({text: text, line: line});
         line += html.call(newlines);
         return "";
       });
-      parseEndTag("", stack.last());
+      parseEndTag("", current);
     } 
     else if (html.indexOf("<!--") == 0 && (index = html.indexOf("-->")) >= 0) {
       current.children.push({comment: html.substring(4, index), line: line});
@@ -353,7 +344,7 @@ var htmlParser = function(html, doctype) {
     last = html;
   }
   parseEndTag("");
-  return document;
+  return doc;
 };
 
 var html = "<html>\r\n"+
@@ -363,10 +354,10 @@ var html = "<html>\r\n"+
   "    <body>"+
   "    <table><tr><td><p>hi</tbody></table>"+
   "</html>";
-
+  
 var spec = new html_401_spec(doctype);
 spec.compute();
 console.log(spec);
-var tree = htmlParser(html, spec.transitional);
-console.log(tree);
-console.log(tree.call(draw));
+var doc = htmlParser(html, spec.transitional);
+console.log(doc);
+console.log(doc.call(draw));
