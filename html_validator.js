@@ -9,66 +9,53 @@ Object.prototype.call = function(fn) {
 };
 
 var each = function(fn) {
-  for(var i in this) {
-    if (this.call(Object.hasOwnProperty, i)) {
+  for(var i in this)
+    if (this.call(Object.hasOwnProperty, i))
       if (this[i] !== null && this[i] !== undefined) this[i].call(fn, i, this);
-    }
-  }
   return this;
 };
 
-var map = function(fn) {
-  if (typeof(fn) == 'string') 
-    var attrFn = function() { return this[fn]; };
+var map = function(fn, all) {
+  if (typeof(fn) == 'string') var attrFn = function() { return this[fn]; };
   var array = [];
-  for (var i = 0; i < this.length; i++) {
-    if (this[i]) array.push(this[i].call(attrFn || fn, i));
+  for (var i = 0, obj; i < this.length; i++) {
+    obj = this[i] !== undefined && this[i] !== null;
+    if (obj || all) array.push((obj ? this[i] : false).call(attrFn || fn, i));
   }
   return array;
 };
 
+var get = function(key) { return function() { return this[key] }; };
+
 var select = function(fn) {
   var array = [];
-  for (var i = 0; i < this.length; i++) {
-    if (this[i].call(fn, i)) array.push(this[i]);
-  }
+  this.call(map, function(i) { if (this.call(fn, i)) array.push(this); })
   return array;
 };
 
 var sum = function(){
   for (var i = 0, sum = 0; i < this.length; i++) sum += this[i];
   return sum;
-}
+};
 
-var values = function() {
+var mapEach = function(fn) {
   var array = [];
-  this.call(each, function() {
-    array.push(this);
-  });
+  this.call(each, function(name) { array.push(this.call(fn, name)); });
   return array;
-}
+};
 
-var keys = function() {
-  var array = [];
-  this.call(each, function(key) {
-    array.push(key);
-  });
-  return array;
-}
+var values = function() { return this.call(mapEach, function() { return this; }); };
+var keys = function() { return this.call(mapEach, function(key) { return key; }); };
 
 var merge = function(b) {
   var a = this;
-  b.call(each, function(name) {
-    a[name] = this;
-  });
+  b.call(each, function(name) { a[name] = this; });
   return this;
 };
 
 var clone = function() {
   var obj = {};
-  this.call(each, function(name) {
-    obj[name] = this;
-  });
+  this.call(each, function(name) { obj[name] = this; });
   return obj;
 };
 
@@ -264,25 +251,35 @@ var doctype = {
 };
 
 var htmlParser = function(html, doctype) {
-  var startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
-  var endTag = /^<\/(\w+)[^>]*>/;
+  var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
+  var endTag = /<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
   var doc = {name: '#root', children: [], all: []};
   var index, match, endedTag, line = 1, last = html, current = doc;
   var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
-  var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; }
+  var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
+  var min = function() { return Math.min.apply({}, this); }
+  var allowed_descendents = function() {
+    var obj = {}, descendents;
+    this.call(stack).call(map, function() { 
+      if (descendents = doctype.tags[this.name].allowed_descendents) obj.call(merge, descendents);  });
+    return obj;
+  };
 
   //need to allow for children from implicit tags
   var parseStartTag = function(html, tag, rest, selfClosed) {
-    if (doctype.groups.tags.close_optional[current])
-      if (!doctype.tags[current].allowed_children[tag]) parseEndTag("", current);
+    if (doctype.groups.tags.close_optional[current.name])
+      //need to handle allowed_descendants, ignoring excluded descendents for parser flexibility
+      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowed_descendents)[tag]) 
+        parseEndTag("", current.name);
     
     //abstract for xhtml
     var unary = doctype.groups.tags.unary[tag] || selfClosed;
     
     var attrs = [];
     rest.replace(attr, function(match, name) {
+      //replace self_value with element's computed attributes which can have no value
       var value = arguments[2] || arguments[3] || arguments[4] || (doctype.groups.attrs.self_value[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
@@ -305,33 +302,35 @@ var htmlParser = function(html, doctype) {
   };
  
   while (html) {
-    if (current && doctype.groups.tags.cdata_elements[current]) {
-      //check out end of this regex [^>]* ???
-      html = html.replace(new RegExp("(.*)<\/"+current+"[^>]*>"), function(all, text){
+    if (current && doctype.groups.tags.cdata_elements[current.name]) {
+      //removed "[^>]*" from regex end, need to check
+      html = html.replace(new RegExp("(.*)<\/"+current.name+">"), function(all, text) {
         //need more robust solution, and logging of whether cdata tag is used
         text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
         current.children.push({text: text, line: line});
         line += html.call(newlines);
         return "";
       });
-      parseEndTag("", current);
+      parseEndTag("", current.name);
     } 
-    else if (html.indexOf("<!--") == 0 && (index = html.indexOf("-->")) >= 0) {
-      current.children.push({comment: html.substring(4, index), line: line});
+    else if (html.indexOf("<!--") == 0) {
+      current.children.push({name: "#comment", value: html.substring(4, index), line: line});
       line += html.substring(4, index).call(newlines);
       html = html.substring(index + 3);
     } 
-    else if (html.indexOf("</") == 0 && (match = html.match(endTag))) {
+    else if (html.search(endTag) == 0) {
+      match = html.match(endTag);
       html = html.substring(match[0].length);
       match[0].replace(endTag, parseEndTag);
     } 
-    else if (html.indexOf("<") == 0 && (match = html.match(startTag))) {
+    else if (html.search(startTag) == 0) {
+      match = html.match(startTag);
       html = html.substring(match[0].length);
       match[0].replace(startTag, parseStartTag);
     }
     else {
-      //this bit can't handle less than symbol
-      index = html.indexOf("<");
+      var matches = [html.search(startTag), html.search(endTag), html.indexOf("<!--")];
+      index = (matches.call(select, function() { return this >= 0; }) || []).call(min);
       var text = index < 0 ? html : html.substring(0, index);
       current.children.push({text: text, line: line});
       line += text.call(newlines);
@@ -347,9 +346,10 @@ var htmlParser = function(html, doctype) {
 var html = "<html>\r\n"+
   "    <head>"+
   "    <title> Hi!\r\n"+
+  "    <script type='javascript'>blah blah <b> blah</script>"+
   "    </head>\n"+
-  "    <body>\n"+
-  "    <table><tr>\n<td><p\n> dsad sads adsa dhi</tbody></table>\n"+
+  "    <body>\n<!-- abc "+
+  "    <table><tr>\n<td><p\n> ds<banana ad s>ads a<>dsa <del>dhi<div></div></del></tbody></table>\n"+
   "</html>";
   
 var spec = new html_401_spec(doctype);
