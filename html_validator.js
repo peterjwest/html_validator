@@ -174,7 +174,17 @@ var doctype = {
       if (tags[name].allowed_parents) {
         tags[name].allowed_parents.call(each, function(parentName) {
           tags[parentName].implicit_children = tags[parentName].implicit_children || {};
-          tags[parentName].implicit_children[name] = true;
+          var childStructure = (tags[parentName].exact_children || tags[parentName].ordered_children);
+          tags[parentName].implicit_children[name] = {
+            exact: !!tags[parentName].exact_children,
+            position: childStructure[name],
+            before_children: childStructure.call(clone).call(each, function(childName, children) { 
+              if (this >= childStructure[name]) delete children[childName]; 
+            }),
+            after_children: childStructure.call(clone).call(each, function(childName, children) {   
+              if (this <= childStructure[name]) delete children[childName]; 
+            })
+          };
         });
       }
     });
@@ -267,10 +277,22 @@ var htmlParser = function(html, doctype) {
     return obj;
   };
 
-  //need to allow for children from implicit tags
-  var parseStartTag = function(html, tag, rest, selfClosed) {
+  var parseStartTag = function(html, tag, rest, selfClosed) {  
+    //need to allow for children from implicit tags
+    if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
+      var implicit_children = doctype.tags[current.name].implicit_children;
+      implicit_children.call(each, function(childName) {
+        var implicitChild = this;
+        if (tag == childName) return;
+        if (implicitChild.exact && current.children.call(select, function() { return this.name == childName; }).length > 0) return;
+        if (implicitChild.position == 1 && current.children.call(select, function() { return implicitChild.after_children[this.name]; }).length == 0)
+          parseStartTag("", childName, "", false);
+          if (implicitChild.after_children[tag]) current = current.parent;
+        //var last_child = current.children[current.children.length - 1];
+      });
+    }
+    
     if (doctype.groups.tags.close_optional[current.name])
-      //need to handle allowed_descendants, ignoring excluded descendents for parser flexibility
       if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowed_descendents)[tag]) 
         parseEndTag("", current.name);
     
@@ -292,7 +314,8 @@ var htmlParser = function(html, doctype) {
   
   var parseEndTag = function(html, tag) {
     if (endedTag = current.call(stack)[tag ? current.call(depth, tag) : 0]) {
-      endedTag.closed = true;
+      //
+      if (html) endedTag.closed = true;
       current = endedTag.parent;
     }
     else {
@@ -344,10 +367,10 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<html>\r\n"+
-  "    <head>"+
-  "    <title> Hi!\r\n"+
+  "    "+
+  "    <title> Hi!\r\n</title>"+
   "    <script type='javascript'>blah blah <b> blah</script>"+
-  "    </head>\n"+
+  "    \n"+
   "    <body>\n<!-- abc "+
   "    <table><tr>\n<td><p\n> ds<banana ad s>ads a<>dsa <del>dhi<div></div></del></tbody></table>\n"+
   "</html>";
