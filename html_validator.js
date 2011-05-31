@@ -174,17 +174,7 @@ var doctype = {
       if (tags[name].allowed_parents) {
         tags[name].allowed_parents.call(each, function(parentName) {
           tags[parentName].implicit_children = tags[parentName].implicit_children || {};
-          var childStructure = (tags[parentName].exact_children || tags[parentName].ordered_children);
-          tags[parentName].implicit_children[name] = {
-            exact: !!tags[parentName].exact_children,
-            position: childStructure[name],
-            before_children: childStructure.call(clone).call(each, function(childName, children) { 
-              if (this >= childStructure[name]) delete children[childName]; 
-            }),
-            after_children: childStructure.call(clone).call(each, function(childName, children) {   
-              if (this <= childStructure[name]) delete children[childName]; 
-            })
-          };
+          tags[parentName].implicit_children[(tags[parentName].exact_children || tags[parentName].ordered_children)[name]] = name;
         });
       }
     });
@@ -270,6 +260,7 @@ var htmlParser = function(html, doctype) {
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
+  var html_children = function() { return this.children.call(select, function() { return this.name; }); };
   var allowed_descendents = function() {
     var obj = {}, descendents;
     this.call(stack).call(map, function() { 
@@ -278,24 +269,36 @@ var htmlParser = function(html, doctype) {
   };
 
   var parseStartTag = function(html, tag, rest, selfClosed) {  
-    //need to allow for children from implicit tags
-    if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
-      var implicit_children = doctype.tags[current.name].implicit_children;
-      implicit_children.call(each, function(childName) {
-        var implicitChild = this;
-        if (tag == childName) return;
-        if (implicitChild.exact && current.children.call(select, function() { return this.name == childName; }).length > 0) return;
-        if (implicitChild.position == 1 && current.children.call(select, function() { return implicitChild.after_children[this.name]; }).length == 0)
-          parseStartTag("", childName, "", false);
-          if (implicitChild.after_children[tag]) current = current.parent;
-        //var last_child = current.children[current.children.length - 1];
+    //if the current tag has implicit children
+    var changed = true;
+    while (doctype.tags[current.name] && doctype.tags[current.name].implicit_children && changed) {
+      //for each of those children
+      changed = false;
+      doctype.tags[current.name].implicit_children.call(each, function(position) {
+        //if the current has exact children
+        if (doctype.tags[current.name].exact_children) {
+          // if the next tag isn't the same as this one, and the tag position is just right
+          if (this != tag && current.call(html_children).length + 1 == position) {
+            console.log("Parent is "+current.name+", making implicit "+this+" next tag is "+tag);
+            var element = {name: this, attrs: [], parent: current, unary: false, children: [], line: line};
+            current.children.push(element);
+            doc.all.push(element);
+            current = element;
+            changed = true;
+          }
+        }
+        //if the current has ordered children
+        else if (doctype.tags[this].ordered_children) {
+        }
       });
     }
     
-    if (doctype.groups.tags.close_optional[current.name])
-      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowed_descendents)[tag]) 
+    if (doctype.groups.tags.close_optional[current.name]) {
+      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowed_descendents)[tag]) {
         parseEndTag("", current.name);
-    
+      }
+    }
+        
     //abstract for xhtml
     var unary = doctype.groups.tags.unary[tag] || selfClosed;
     
@@ -305,11 +308,11 @@ var htmlParser = function(html, doctype) {
       var value = arguments[2] || arguments[3] || arguments[4] || (doctype.groups.attrs.self_value[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
-    var tag = {name: tag, attrs: attrs, parent: current, unary: unary, children: [], line: line};
+    var element = {name: tag, attrs: attrs, parent: current, unary: unary, children: [], line: line};
     line += html.call(newlines);
-    current.children.push(tag);
-    doc.all.push(tag);
-    if (!unary) current = tag;
+    current.children.push(element);
+    doc.all.push(element);
+    if (!unary) current = element;
   };
   
   var parseEndTag = function(html, tag) {
@@ -366,7 +369,7 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "<html>\r\n"+
+var html = "\r\n"+
   "    "+
   "    <title> Hi!\r\n</title>"+
   "    <script type='javascript'>blah blah <b> blah</script>"+
