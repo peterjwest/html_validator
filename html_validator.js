@@ -289,6 +289,7 @@ var htmlParser = function(html, doctype) {
         }
       });
       if (implied) {
+        //prevent recursion when not one of 'tag' is not valid child of 'implied', allow once but then stop
         var element = {name: implied, attrs: [], parent: current, unary: false, children: [], line: line};
         current.children.push(element);
         doc.all.push(element);
@@ -303,7 +304,7 @@ var htmlParser = function(html, doctype) {
         return parseStartTag(html, tag, rest, selfClosed);
       }
     }
-        
+
     //abstract for xhtml
     var unary = doctype.groups.tags.unary[tag] || selfClosed;
     
@@ -321,12 +322,13 @@ var htmlParser = function(html, doctype) {
   };
   
   var parseEndTag = function(html, tag) {
+    //need to add implicit tags if not defined, actually check with html validator
     if (endedTag = current.call(stack)[tag ? current.call(depth, tag) : 0]) {
       if (html) endedTag.closed = true;
       current = endedTag.parent;
     }
     else {
-      //unexpected unopened tag
+      console.log("unexpected end tag");
     }
     line += html.call(newlines);
   };
@@ -373,14 +375,8 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "\r\n"+
-  "    "+
-  "    <title> Hi!\r\n</title>"+
-  "    <script type='javascript'>blah blah <b> blah</script>"+
-  "    </head>\n"+
-  "    <table><caption></caption><col><tfoot></tfoot><tr><td></td></tr><tbody><tr><td></td></tr></table>\n"+
-  "</html>";
-  
+//validator error: validator fails when table has no tbody or tbody elements
+var html = "<title> Hi!\r\n</title></head><table></div><col><tfoot></table></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 console.log(spec);
