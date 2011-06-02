@@ -67,10 +67,11 @@ var makeMap = function() {
 
 var draw = function(indent) {
   var text = "";
-  if (this.name) {
-   text += (indent||"")+"<"+this.name+">\n";
-   if (this.children) text += this.children.call(map, function() { return this.call(draw, (indent||"")+"  "); }).join("");
-   text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "{</"+this.name+">}\n");
+  if (this.unopened) text += (indent||"")+"</"+this.name+">\n";
+  else {
+    text += (indent||"")+(this.implicit ? "{<"+this.name+">}" : "<"+this.name+">")+"\n";
+    if (this.children) text += this.children.call(map, function() { return this.call(draw, (indent||"")+"  "); }).join("");
+    if (!this.unary && !this.selfClosed) text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "{</"+this.name+">}\n");
   }
   return text;
 };
@@ -263,7 +264,9 @@ var htmlParser = function(html, doctype) {
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
   var lastChild = function() { return this[this.length - 1]; };
-  var htmlChildren = function() { return this.children.call(select, function() { return this.name; }); };
+  var htmlChildren = function() { 
+    return this.children.call(select, function() { return this.name != "#text" && this.name != "#comment"; }); 
+  };
   var allowedDescendents = function() {
     var obj = {}, descendents;
     this.call(stack).call(map, function() { 
@@ -274,12 +277,12 @@ var htmlParser = function(html, doctype) {
   var parseStartTag = function(html, tag, rest, selfClosed) {
     var prev = current.call(htmlChildren).call(lastChild);
     if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
-      var implied = false;
+      var implicit = false;
       doctype.tags[current.name].implicit_children.call(each, function(position) {
-        if (implied) return;
+        if (implicit) return;
         if (doctype.tags[current.name].exact_children) {
           if (this != tag && current.call(htmlChildren).length + 1 == position) {
-            implied = this;
+            implicit = this;
           }
         }
         else if (doctype.tags[current.name].ordered_children) {
@@ -287,12 +290,12 @@ var htmlParser = function(html, doctype) {
           var children = current.call(htmlChildren);
           var invalidBeforeTags = children.call(select, function() { return orderedChildren[this] > position; }).length;
           if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
-            implied = this;
+            implicit = this;
           }
         }
       });
-      if (implied && (!prev || prev.name+"" != implied || !prev.implicit)) {
-        var element = {name: implied, implicit: true, attrs: [], parent: current, unary: false, children: [], line: line};
+      if (implicit && (!prev || prev.name+"" != implicit || !prev.implicit)) {
+        var element = {name: implicit, implicit: true, attrs: [], parent: current, unary: false, children: [], line: line};
         current.children.push(element);
         doc.all.push(element);
         current = element;
@@ -308,7 +311,7 @@ var htmlParser = function(html, doctype) {
     }
 
     //abstract for xhtml
-    var unary = doctype.groups.tags.unary[tag] || selfClosed;
+    var unary = doctype.groups.tags.unary[tag];
     
     var attrs = [];
     rest.replace(attr, function(match, name) {
@@ -316,7 +319,7 @@ var htmlParser = function(html, doctype) {
       var value = arguments[2] || arguments[3] || arguments[4] || (doctype.groups.attrs.self_value[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
-    var element = {name: tag, attrs: attrs, parent: current, unary: unary, children: [], line: line};
+    var element = {name: tag, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], line: line};
     line += html.call(newlines);
     current.children.push(element);
     doc.all.push(element);
@@ -324,13 +327,15 @@ var htmlParser = function(html, doctype) {
   };
   
   var parseEndTag = function(html, tag) {
-    //need to add implicit tags if not defined, actually check with html validator
+    //need to add implicit tags if not defined, also need to start unopened implicit tags
     if (endedTag = current.call(stack)[tag ? current.call(depth, tag) : 0]) {
       if (html) endedTag.closed = true;
       current = endedTag.parent;
     }
     else {
-      console.log("unexpected end tag");
+      var element = {name: tag, unopened: true};
+      current.children.push(element);
+      doc.all.push(element);
     }
     line += html.call(newlines);
   };
@@ -341,7 +346,7 @@ var htmlParser = function(html, doctype) {
       html = html.replace(new RegExp("(.*)<\/"+current.name+">"), function(all, text) {
         //need more robust solution, and logging of whether cdata tag is used
         text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
-        current.children.push({text: text, line: line});
+        current.children.push({name: '#text', value: text, line: line, unary: true});
         line += html.call(newlines);
         return "";
       });
@@ -366,7 +371,7 @@ var htmlParser = function(html, doctype) {
       var matches = [html.search(startTag), html.search(endTag), html.indexOf("<!--")];
       index = (matches.call(select, function() { return this >= 0; }) || []).call(min);
       var text = index < 0 ? html : html.substring(0, index);
-      current.children.push({text: text, line: line});
+      current.children.push({name: '#text', value: text, line: line, unary: true});
       line += text.call(newlines);
       html = index < 0 ? "" : html.substring(index);
     }
@@ -378,10 +383,10 @@ var htmlParser = function(html, doctype) {
 };
 
 //validator error: validator fails when table has no tbody or tbody elements
-var html = "<title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot>\n<img>\n</table>\n</html>";
+var html = "<meta/><title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
-console.log(spec);
 var doc = htmlParser(html, spec.transitional);
+console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
