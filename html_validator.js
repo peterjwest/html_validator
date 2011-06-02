@@ -250,6 +250,8 @@ var doctype = {
   }
 };
 
+var i = 0;
+
 var htmlParser = function(html, doctype) {
   var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
   var endTag = /<\/(\w+)[^>]*>/;
@@ -260,15 +262,17 @@ var htmlParser = function(html, doctype) {
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
+  var lastChild = function() { return this[this.length - 1]; };
   var htmlChildren = function() { return this.children.call(select, function() { return this.name; }); };
-  var allowed_descendents = function() {
+  var allowedDescendents = function() {
     var obj = {}, descendents;
     this.call(stack).call(map, function() { 
-      if (descendents = doctype.tags[this.name].allowed_descendents) obj.call(merge, descendents);  });
+      if (descendents = doctype.tags[this.name].allowedDescendents) obj.call(merge, descendents);  });
     return obj;
   };
-
+  
   var parseStartTag = function(html, tag, rest, selfClosed) {
+    var prev = current.call(htmlChildren).call(lastChild);
     if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
       var implied = false;
       doctype.tags[current.name].implicit_children.call(each, function(position) {
@@ -283,14 +287,12 @@ var htmlParser = function(html, doctype) {
           var children = current.call(htmlChildren);
           var invalidBeforeTags = children.call(select, function() { return orderedChildren[this] > position; }).length;
           if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
-            console.log(current.name+" ("+this+" "+position+") ("+tag+" "+(orderedChildren[tag]+0)+") ");
             implied = this;
           }
         }
       });
-      if (implied) {
-        //prevent recursion when not one of 'tag' is not valid child of 'implied', allow once but then stop
-        var element = {name: implied, attrs: [], parent: current, unary: false, children: [], line: line};
+      if (implied && (!prev || prev.name+"" != implied || !prev.implicit)) {
+        var element = {name: implied, implicit: true, attrs: [], parent: current, unary: false, children: [], line: line};
         current.children.push(element);
         doc.all.push(element);
         current = element;
@@ -299,7 +301,7 @@ var htmlParser = function(html, doctype) {
     }
     
     if (doctype.groups.tags.close_optional[current.name]) {
-      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowed_descendents)[tag]) {
+      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowedDescendents)[tag]) {
         parseEndTag("", current.name);
         return parseStartTag(html, tag, rest, selfClosed);
       }
@@ -376,7 +378,7 @@ var htmlParser = function(html, doctype) {
 };
 
 //validator error: validator fails when table has no tbody or tbody elements
-var html = "<title> Hi!\r\n</title></head><table></div><col><tfoot></table></html>";
+var html = "<title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot>\n<img>\n</table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 console.log(spec);
