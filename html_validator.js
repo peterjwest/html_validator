@@ -260,7 +260,7 @@ var htmlParser = function(html, doctype) {
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
-  var html_children = function() { return this.children.call(select, function() { return this.name; }); };
+  var htmlChildren = function() { return this.children.call(select, function() { return this.name; }); };
   var allowed_descendents = function() {
     var obj = {}, descendents;
     this.call(stack).call(map, function() { 
@@ -268,34 +268,39 @@ var htmlParser = function(html, doctype) {
     return obj;
   };
 
-  var parseStartTag = function(html, tag, rest, selfClosed) {  
-    //if the current tag has implicit children
-    var changed = true;
-    while (doctype.tags[current.name] && doctype.tags[current.name].implicit_children && changed) {
-      //for each of those children
-      changed = false;
+  var parseStartTag = function(html, tag, rest, selfClosed) {
+    if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
+      var implied = false;
       doctype.tags[current.name].implicit_children.call(each, function(position) {
-        //if the current has exact children
+        if (implied) return;
         if (doctype.tags[current.name].exact_children) {
-          // if the next tag isn't the same as this one, and the tag position is just right
-          if (this != tag && current.call(html_children).length + 1 == position) {
-            console.log("Parent is "+current.name+", making implicit "+this+" next tag is "+tag);
-            var element = {name: this, attrs: [], parent: current, unary: false, children: [], line: line};
-            current.children.push(element);
-            doc.all.push(element);
-            current = element;
-            changed = true;
+          if (this != tag && current.call(htmlChildren).length + 1 == position) {
+            implied = this;
           }
         }
-        //if the current has ordered children
-        else if (doctype.tags[this].ordered_children) {
+        else if (doctype.tags[current.name].ordered_children) {
+          var orderedChildren = doctype.tags[current.name].ordered_children;
+          var children = current.call(htmlChildren);
+          var invalidBeforeTags = children.call(select, function() { return orderedChildren[this] > position; }).length;
+          if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
+            console.log(current.name+" ("+this+" "+position+") ("+tag+" "+(orderedChildren[tag]+0)+") ");
+            implied = this;
+          }
         }
       });
+      if (implied) {
+        var element = {name: implied, attrs: [], parent: current, unary: false, children: [], line: line};
+        current.children.push(element);
+        doc.all.push(element);
+        current = element;
+        return parseStartTag(html, tag, rest, selfClosed);
+      }
     }
     
     if (doctype.groups.tags.close_optional[current.name]) {
       if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowed_descendents)[tag]) {
         parseEndTag("", current.name);
+        return parseStartTag(html, tag, rest, selfClosed);
       }
     }
         
@@ -317,7 +322,6 @@ var htmlParser = function(html, doctype) {
   
   var parseEndTag = function(html, tag) {
     if (endedTag = current.call(stack)[tag ? current.call(depth, tag) : 0]) {
-      //
       if (html) endedTag.closed = true;
       current = endedTag.parent;
     }
@@ -343,12 +347,12 @@ var htmlParser = function(html, doctype) {
       current.children.push({name: "#comment", value: html.substring(4, index), line: line});
       line += html.substring(4, index).call(newlines);
       html = html.substring(index + 3);
-    } 
+    }
     else if (html.search(endTag) == 0) {
       match = html.match(endTag);
       html = html.substring(match[0].length);
       match[0].replace(endTag, parseEndTag);
-    } 
+    }
     else if (html.search(startTag) == 0) {
       match = html.match(startTag);
       html = html.substring(match[0].length);
@@ -373,9 +377,8 @@ var html = "\r\n"+
   "    "+
   "    <title> Hi!\r\n</title>"+
   "    <script type='javascript'>blah blah <b> blah</script>"+
-  "    \n"+
-  "    <body>\n<!-- abc "+
-  "    <table><tr>\n<td><p\n> ds<banana ad s>ads a<>dsa <del>dhi<div></div></del></tbody></table>\n"+
+  "    </head>\n"+
+  "    <table><caption></caption><col><tfoot></tfoot><tr><td></td></tr><tbody><tr><td></td></tr></table>\n"+
   "</html>";
   
 var spec = new html_401_spec(doctype);
