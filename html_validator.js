@@ -333,9 +333,16 @@ var htmlParser = function(html, doctype) {
       current = endedTag.parent;
     }
     else {
-      var element = {name: tag, unopened: true};
-      current.children.push(element);
-      doc.all.push(element);
+      if (doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
+        parseStartTag("", tag+"-i", "", false);
+        current.closed = true;
+        curent = current.parent;
+      }
+      else { 
+        var element = {name: tag, unopened: true};
+        current.children.push(element);
+        doc.all.push(element);
+      }
     }
     line += html.call(newlines);
   };
