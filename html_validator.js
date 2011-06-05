@@ -258,15 +258,17 @@ var htmlParser = function(html, doctype) {
   var endTag = /<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
   var doc = {name: '#root', children: [], all: []};
-  var index, match, endedTag, line = 1, last = html, current = doc;
+  var index, match, endedTag, line = 1, lastHtml = html, current = doc;
   var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
-  var lastChild = function() { return this[this.length - 1]; };
+  var last = function() { return this[this.length - 1]; };
+  
   var htmlChildren = function() { 
     return this.children.call(select, function() { return this.name != "#text" && this.name != "#comment"; }); 
   };
+  
   var allowedDescendents = function() {
     var obj = {}, descendents;
     this.call(stack).call(map, function() { 
@@ -275,7 +277,7 @@ var htmlParser = function(html, doctype) {
   };
   
   var parseStartTag = function(html, tag, rest, selfClosed) {
-    var prev = current.call(htmlChildren).call(lastChild);
+    var prev = current.call(htmlChildren).call(last);
     if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
       var implicit = false;
       doctype.tags[current.name].implicit_children.call(each, function(position) {
@@ -319,7 +321,7 @@ var htmlParser = function(html, doctype) {
       var value = arguments[2] || arguments[3] || arguments[4] || (doctype.groups.attrs.self_value[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
-    var element = {name: tag, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], line: line};
+    var element = {name: tag, implicit: !html, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], line: line};
     line += html.call(newlines);
     current.children.push(element);
     doc.all.push(element);
@@ -328,21 +330,24 @@ var htmlParser = function(html, doctype) {
   
   var parseEndTag = function(html, tag) {
     //need to add implicit tags if not defined, also need to start unopened implicit tags
-    if (endedTag = current.call(stack)[tag ? current.call(depth, tag) : 0]) {
+    var index = tag ? current.call(depth, tag) : 0;
+    var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
+    if (endedTags.length > 0) {
+      endedTags.call(each, function() {
+        //check implicit tags here
+      });
+      var endedTag = endedTags.call(last);
       if (html) endedTag.closed = true;
       current = endedTag.parent;
     }
-    else {
-      if (doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
-        parseStartTag("", tag+"-i", "", false);
-        current.closed = true;
-        curent = current.parent;
-      }
-      else { 
-        var element = {name: tag, unopened: true};
-        current.children.push(element);
-        doc.all.push(element);
-      }
+    else if (doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
+      parseStartTag("", tag, "", false);
+      return parseEndTag(html, tag);
+    }
+    else { 
+      var element = { name: tag, unopened: true };
+      current.children.push(element);
+      doc.all.push(element);
     }
     line += html.call(newlines);
   };
@@ -382,8 +387,8 @@ var htmlParser = function(html, doctype) {
       line += text.call(newlines);
       html = index < 0 ? "" : html.substring(index);
     }
-    if (html == last) throw "Parse Error: " + html;
-    last = html;
+    if (html == lastHtml) throw "Parse Error: " + html;
+    lastHtml = html;
   }
   parseEndTag("");
   return doc;
