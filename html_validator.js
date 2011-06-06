@@ -184,18 +184,18 @@ var doctype = {
   validate: function(doc) {
     var doctype = this;
     errors = [];
-    console.log(doctype.rules);
-    doctype.rule_logic.rules.call(each, function(name) {
+    console.log(doctype);
+    doctype.rules.rules.call(each, function(name) {
       var rule = this;
-      doctype.rule_logic.rules.sets[name].call(map, function() {
+      doctype.rulesets[name].call(map, function() {
         var set = this;
-        errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rule_logic.messages[name], set); }));
+        errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rule.messages[name], set); }));
       });
     });
     return errors;
   },
   
-  rule_logic: {
+  rules: {
     attributes: {
       number: /^\s*[0-9]+\s*$/,
       length: /^\s*[0-9]+%?\s*/,
@@ -321,7 +321,7 @@ var htmlParser = function(html, doctype) {
       var value = arguments[2] || arguments[3] || arguments[4] || (doctype.groups.attrs.self_value[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
-    var element = {name: tag, implicit: !html, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], line: line};
+    var element = { name: tag, implicit: !html, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], line: line };
     line += html.call(newlines);
     current.children.push(element);
     doc.all.push(element);
@@ -329,12 +329,18 @@ var htmlParser = function(html, doctype) {
   };
   
   var parseEndTag = function(html, tag) {
-    //need to add implicit tags if not defined, also need to start unopened implicit tags
     var index = tag ? current.call(depth, tag) : 0;
     var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
     if (endedTags.length > 0) {
       endedTags.call(each, function() {
-        //check implicit tags here
+        var tag = this;
+        if (doctype.tags[tag.name].implicit_children) {
+          doctype.tags[tag.name].implicit_children.call(each, function() {
+            var implicit_child = this;
+            if (tag.children.call(select, function() { return this.name+"" == implicit_child; }).length == 0)
+              tag.children.push({ name: implicit_child, implicit: true, children: [], parent: tag, line: line });
+          });
+        }
       });
       var endedTag = endedTags.call(last);
       if (html) endedTag.closed = true;
@@ -394,10 +400,11 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "<meta/><title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table>\n</html>";
+var html = "<meta/><title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
 console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
+console.log(spec.transitional.validate(doc));
