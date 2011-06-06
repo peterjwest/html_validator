@@ -258,8 +258,10 @@ var html_401_spec = function(doctype) {
       ]
     },
     rulesets: {
-      allowed_children: [{tags: 'frameset', innerTags: 'frame,frameset,noframes'}],
-      allowed_children: [{tags: 'noframes', innerTags: 'noframes_content'}],
+      allowed_children: [
+        //{tags: 'frameset', innerTags: 'frame,frameset,noframes'}, 
+        {tags: 'noframes', innerTags: 'noframes_content'}
+      ],
       banned_descendents: [{tags: 'noframes', innerTags: 'noframes'}],
       exact_children: [{tags: 'noframes', innerTags: 'noframes_content'}],
       required_either_child: [{tags: 'frameset', innerTags: 'frameset,frame'}]

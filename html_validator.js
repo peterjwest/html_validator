@@ -15,6 +15,13 @@ var each = function(fn) {
   return this;
 };
 
+var each2 = function(fn) {
+  for(var i in this)
+    if (this.call(Object.hasOwnProperty, i))
+      if (this[i] !== null && this[i] !== undefined) this.call(fn, this[i], i, this);
+  return this;
+};
+
 var map = function(fn, all) {
   if (typeof(fn) == 'string') var attrFn = function() { return this[fn]; };
   var array = [];
@@ -184,13 +191,14 @@ var doctype = {
   validate: function(doc) {
     var doctype = this;
     errors = [];
-    console.log(doctype);
-    doctype.rules.rules.call(each, function(name) {
-      var rule = this;
-      doctype.rulesets[name].call(map, function() {
-        var set = this;
-        errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rule.messages[name], set); }));
-      });
+    console.log(doctype.rules.rules);
+    doctype.rules.rules.call(each2, function(rule, name) {
+      if (doctype.rulesets[name]) {
+        doctype.rulesets[name].call(map, function() {
+          var set = this;
+          errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { console.log(doctype.rules.messages[name]); return this.call(doctype.rules.messages[name], set); }));
+        });
+      }
     });
     return errors;
   },
@@ -203,11 +211,17 @@ var doctype = {
       name: /^\s*[a-z][a-z0-9-_:.]*\s*$/i,
       names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
     },
-    ordered: {
-      
-    },
     rules: {
-      unique: function(set, doc) {
+      /*allowed_children: function() {},
+      allowed_descendents: function() {},
+      banned_descendents: function() {},
+      exact_children: function() {},
+      exclusive_children: function() {},
+      ordered_children: function() {},
+      required_children: function() {},
+      required_first_child: function() {},
+      required_either_child: function() {},*/
+      unique_children: function(set, doc) {
         var matches = {};
         doc.all.call(map, function() {
           var tag = this;
@@ -216,37 +230,21 @@ var doctype = {
             if (tag.name == name) { matches[name].tags.push(tag); }
           });
         });
+        console.log(matches);
         return matches.call(values).call(select, function() { return this.tags.length > 1; });
-      },
-      
-      not_empty: function(set, doc) { 
-        var matches = [];
-        doc.all.call(map, function() {
-          if (set.tags[this.name] && (this.unary || this.children.call(select, function() { return this.name; }).length == 0))
-            matches.push(this);
-        });
-        return matches;
-      },
-      
-      has_parent: function(set, doc) {
-        var matches = [];
-        doc.all.call(map, function() {
-          if (set.tags[this.name] && (!this.parent || !set.parents[this.parent.name])) matches.push(this);
-        });
-        return matches;
-      },
-      
-      has_only_children: function() {},
-      has_exact_children: function() {},
-      has_first_child: function() {}
+      }
     },
     messages: {
-      unique: function(set) { return this.name.call(inTag)+" tag must be unique, "+this.tags.length+" instances at "+this.tags.call(map, function() { return "line "+this.line; }).call(englishList); },
-      not_empty: function(set) { return this.name.call(inTag)+" tag must not be empty, on line "+this.line; },
-      has_parent: function(set) { return this.name.call(inTag)+" be a child of "+set.parents.call(keys).call(map, inTag).call(englishList, " or "); },
-      has_only_children: function(set) {},
-      has_exact_children: function(set) {},
-      has_first_child: function(set) {}
+      allowed_children: function() {},
+      allowed_descendents: function() {},
+      banned_descendents: function() {},
+      exact_children: function() {},
+      exclusive_children: function() {},
+      ordered_children: function() {},
+      required_children: function() {},
+      required_first_child: function() {},
+      required_either_child: function() {},
+      unique_children: function(set) { return this.name.call(inTag)+" tag must be unique, "+this.tags.length+" instances at "+this.tags.call(map, function() { return "line "+this.line; }).call(englishList); }
     }
   }
 };
@@ -400,7 +398,7 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "<meta/><title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
+var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
