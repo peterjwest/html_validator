@@ -394,7 +394,6 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-//validator error: validator fails when table has no tbody or tbody elements
 var html = "<meta/><title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
