@@ -1,9 +1,8 @@
-#A JavaScript HTML Validator (Insert catchy name here)
+#An HTML Validator in Javascript (Insert catchy name here)
 
-This project is a Javascript HTML validator. 
 Are you fed up of using slow, server side validators with obscure error messages?
 Maybe you aren't, but as a Chrome developer there is no decent HTML validation solution.
-The aim of this project this:
+The aim of this project is this:
 
 - To allow anyone on any browser be able to validate HTML, either using a bookmarklet or browser extension
 - To support the major doctypes: HTML 4.01, XHTML 1.0 and eventually HTML 5
