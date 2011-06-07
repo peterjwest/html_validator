@@ -196,7 +196,8 @@ var doctype = {
       if (doctype.rulesets[name]) {
         doctype.rulesets[name].call(map, function() {
           var set = this;
-          errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { console.log(doctype.rules.messages[name]); return this.call(doctype.rules.messages[name], set); }));
+          errors = errors.concat(doctype.call(rule, set, doc));
+          //errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rules.messages[name], set); }));
         });
       }
     });
@@ -222,16 +223,21 @@ var doctype = {
       required_first_child: function() {},
       required_either_child: function() {},*/
       unique_children: function(set, doc) {
-        var matches = {};
+        var uniques = [];
         doc.all.call(map, function() {
           var tag = this;
-          set.tags.call(each, function(name) {
-            matches[name] = matches[name] || {name: name, tags: []};
-            if (tag.name == name) { matches[name].tags.push(tag); }
-          });
+          if (set.tags[tag.name]) {
+            set.innerTags.call(each, function(innerTag) {
+              var count = 0;
+              tag.children.call(map, function() {
+                if (this.name == innerTag) count++;
+              });
+              if (count > 1) uniques.push({parent: tag, child: innerTag});
+            });
+          }
         });
-        console.log(matches);
-        return matches.call(values).call(select, function() { return this.tags.length > 1; });
+        return uniques;
+        //return matches.call(values).call(select, function() { return this.tags.length > 1; });
       }
     },
     messages: {
