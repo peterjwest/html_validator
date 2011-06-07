@@ -87,7 +87,7 @@ var reassemble = function() {
   var html = "";
   if (this.html) html += this.html;
   if (this.children) html += this.children.call(map, function() { return this.call(reassemble); }).join("");
-  if (this.endHtml) html += this.html;
+  if (this.endHtml) html += this.endHtml;
   return html;
 };
 
@@ -349,15 +349,16 @@ var htmlParser = function(html, doctype) {
         var tag = this;
         if (doctype.tags[tag.name].implicit_children) {
           doctype.tags[tag.name].implicit_children.call(each, function() {
-            var implicit_child = this;
-            if (tag.children.call(select, function() { return this.name+"" == implicit_child; }).length == 0)
-              tag.children.push({ name: implicit_child, implicit: true, children: [], parent: tag, html: '' });
+            var implicit = this;
+            if (tag.children.call(select, function() { return this.name+"" == implicit; }).length == 0)
+              tag.children.push({ name: implicit, implicit: true, children: [], parent: tag, html: '' });
           });
         }
       });
-      var endedTag = endedTags.call(last);
+      var endedTag = endedTags[0];
       if (html) { 
         endedTag.closed = true;
+        console.log(endedTags);
         endedTag.endHtml = html;
       }
       current = endedTag.parent;
@@ -367,7 +368,7 @@ var htmlParser = function(html, doctype) {
       return parseEndTag(html, tag);
     }
     else { 
-      var element = {name: tag, unopened: true, html: ''};
+      var element = {name: tag, unopened: true, endHtml: html};
       current.children.push(element);
       doc.all.push(element);
     }
