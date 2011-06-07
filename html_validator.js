@@ -196,8 +196,8 @@ var doctype = {
       if (doctype.rulesets[name]) {
         doctype.rulesets[name].call(map, function() {
           var set = this;
-          errors = errors.concat(doctype.call(rule, set, doc));
-          //errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rules.messages[name], set); }));
+          //errors = errors.concat(doctype.call(rule, set, doc));
+          errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rules.messages[name], set); }));
         });
       }
     });
@@ -232,7 +232,7 @@ var doctype = {
               tag.children.call(map, function() {
                 if (this.name == innerTag) count++;
               });
-              if (count > 1) uniques.push({parent: tag, child: innerTag});
+              if (count > 1) uniques.push({parent: tag, child: innerTag, count: count});
             });
           }
         });
@@ -241,7 +241,7 @@ var doctype = {
       }
     },
     messages: {
-      allowed_children: function() {},
+      /*allowed_children: function() {},
       allowed_descendents: function() {},
       banned_descendents: function() {},
       exact_children: function() {},
@@ -249,8 +249,10 @@ var doctype = {
       ordered_children: function() {},
       required_children: function() {},
       required_first_child: function() {},
-      required_either_child: function() {},
-      unique_children: function(set) { return this.name.call(inTag)+" tag must be unique, "+this.tags.length+" instances at "+this.tags.call(map, function() { return "line "+this.line; }).call(englishList); }
+      required_either_child: function() {},*/
+      unique_children: function(set) {
+        return this.parent.name.call(inTag)+" can only contain one "+this.child.call(inTag)+", found "+this.count+" , starting at line "+this.parent.line;
+      }
     }
   }
 };
