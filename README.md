@@ -1,14 +1,14 @@
 #An HTML Validator in Javascript (Insert catchy name here)
 
 Are you fed up of using slow, server side validators with obscure error messages?
-Maybe you aren't, but as a Chrome developer there is no decent HTML validation solution.
+Maybe you aren't, but as a Chrome developer I am, because there is no decent HTML validation solution.
 The aim of this project is this:
 
 - To allow anyone on any browser be able to validate HTML, either using a bookmarklet or browser extension
 - To support the major doctypes: HTML 4.01, XHTML 1.0 and eventually HTML 5
 - To provide a plain English, sensible version of the W3C HTML spec
 
-I'd also like to use the platform to create an experimental doctype for best practice HTML, which would be user specified.
+I'd also like to use the platform to create an experimental doctype for best practice HTML, which would evolve with the web.
 
 #HTML Doctype Bugs
 
