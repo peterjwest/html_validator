@@ -199,12 +199,10 @@ var doctype = {
   validate: function(doc) {
     var doctype = this;
     errors = [];
-    console.log(doctype.rules.rules);
     doctype.rules.rules.call(each2, function(rule, name) {
       if (doctype.rulesets[name]) {
         doctype.rulesets[name].call(map, function() {
           var set = this;
-          //errors = errors.concat(doctype.call(rule, set, doc));
           errors = errors.concat(doctype.call(rule, set, doc).call(map, function() { return this.call(doctype.rules.messages[name], set); }));
         });
       }
@@ -221,17 +219,27 @@ var doctype = {
       names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
     },
     rules: {
-      /*allowed_children: function() {},
-      allowed_descendents: function() {},
+      allowed_children: function(set, doc) {
+        var errors = [];
+        doc.all.call(map, function() {
+          var tag = this;
+          if (set.tags[tag.name]) {
+            tag.children.call(map, function() {
+              if (!set.innerTags[this.name]) errors.push({parent: tag, child: this});
+            });
+          }
+        });
+        return errors;
+      },
+      /*allowed_descendents: function() {},
       banned_descendents: function() {},
       exact_children: function() {},
       exclusive_children: function() {},
       ordered_children: function() {},
-      required_children: function() {},
       required_first_child: function() {},
       required_either_child: function() {},*/
-      unique_children: function(set, doc) {
-        var uniques = [];
+      required_children: function(set, doc) {
+        var errors = [];
         doc.all.call(map, function() {
           var tag = this;
           if (set.tags[tag.name]) {
@@ -240,26 +248,45 @@ var doctype = {
               tag.children.call(map, function() {
                 if (this.name == innerTag) count++;
               });
-              if (count > 1) uniques.push({parent: tag, child: innerTag, count: count});
+              if (count < 1) errors.push({parent: tag, child: innerTag, count: count});
             });
           }
         });
-        return uniques;
-        //return matches.call(values).call(select, function() { return this.tags.length > 1; });
+        return errors;
+      },
+      unique_children: function(set, doc) {
+        var errors = [];
+        doc.all.call(map, function() {
+          var tag = this;
+          if (set.tags[tag.name]) {
+            set.innerTags.call(each, function(innerTag) {
+              var count = 0;
+              tag.children.call(map, function() {
+                if (this.name == innerTag) count++;
+              });
+              if (count > 1) errors.push({parent: tag, child: innerTag, count: count});
+            });
+          }
+        });
+        return errors;
       }
     },
     messages: {
-      /*allowed_children: function() {},
-      allowed_descendents: function() {},
+      allowed_children: function(set) {
+        return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
+      },
+      /*allowed_descendents: function() {},
       banned_descendents: function() {},
       exact_children: function() {},
       exclusive_children: function() {},
       ordered_children: function() {},
-      required_children: function() {},
       required_first_child: function() {},
       required_either_child: function() {},*/
+      required_children: function(set) {
+        return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
+      },
       unique_children: function(set) {
-        return this.parent.name.call(inTag)+" can only contain one "+this.child.call(inTag)+", found "+this.count;
+        return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+", found "+this.count;
       }
     }
   }
@@ -358,7 +385,6 @@ var htmlParser = function(html, doctype) {
       var endedTag = endedTags[0];
       if (html) { 
         endedTag.closed = true;
-        console.log(endedTags);
         endedTag.endHtml = html;
       }
       current = endedTag.parent;
@@ -415,7 +441,8 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
+var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
+var html = "<head></head>\n<form><fieldset></fieldset><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
@@ -423,6 +450,3 @@ console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
 console.log(spec.transitional.validate(doc));
-console.log(html);
-console.log("------------------");
-console.log(doc.call(reassemble));
