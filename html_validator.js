@@ -91,6 +91,15 @@ var reassemble = function() {
   return html;
 };
 
+var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
+var line = 1;
+var findLines = function() {
+  this.line = line; 
+  if (this.html) line += this.html.call(newlines);
+  if (this.children) this.children.call(map, function() { this.call(findLines); });
+  if (this.endHtml) line += this.endHtml.call(newlines);
+};
+
 var englishList = function(separator) {
   return this.slice(0, this.length -1).join(", ")+(this.length > 1 ? (separator || " and ") : "")+(this[this.length - 1] || "");
 };
@@ -223,7 +232,7 @@ var doctype = {
         var errors = [];
         doc.all.call(map, function() {
           var tag = this;
-          if (set.tags[tag.name]) {
+          if (set.tags[tag.name] && tag.children) {
             tag.children.call(map, function() {
               if (!set.innerTags[this.name]) errors.push({parent: tag, child: this});
             });
@@ -300,7 +309,6 @@ var htmlParser = function(html, doctype) {
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
   var doc = {name: '#root', children: [], all: []};
   var index, match, endedTag, lastHtml = html, current = doc;
-  var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
@@ -389,7 +397,7 @@ var htmlParser = function(html, doctype) {
       }
       current = endedTag.parent;
     }
-    else if (doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
+    else if (doctype.tags[current.name].implicit_children && doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
       parseStartTag("", tag, "", false);
       return parseEndTag(html, tag);
     }
@@ -442,7 +450,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<head></head>\n<form><fieldset></fieldset><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
+var html = "<head></head>\n<form><fieldset></fieldset><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<td>\n</tbody></table><table></table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
@@ -450,3 +458,7 @@ console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
 console.log(spec.transitional.validate(doc));
+
+doc.call(findLines);
+console.log(doc.all.call(map, function() { return this.name+" "+this.line }));
+console.log(html);
