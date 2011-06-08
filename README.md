@@ -10,6 +10,16 @@ The aim of this project is this:
 
 I'd also like to use the platform to create an experimental doctype for best practice HTML, which would evolve with the web.
 
+#TODO
+
+- Check for allowed descendents instead of allowed children
+- Don't worry about html text/comments
+- Check XHTML closing tags
+- Get computed self valued attributes
+- Ask John Resig about weird regex
+- Log CDATA/comment sections in cdata
+- Parse comment end tag
+
 #HTML Doctype Bugs
 
 - object in head can contain content
