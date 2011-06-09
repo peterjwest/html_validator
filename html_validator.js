@@ -90,7 +90,7 @@ var reassemble = function() {
   if (this.endHtml) html += this.endHtml;
   return html;
 };
-
+http://www.channel4.com/programmes/facejacker
 var englishList = function(separator) {
   return this.slice(0, this.length -1).join(", ")+(this.length > 1 ? (separator || " and ") : "")+(this[this.length - 1] || "");
 };
@@ -104,12 +104,16 @@ var addAttributes = function(array, b) {
   array.call(map, function() { a[this] = b[this]; }); 
 }
 
-// Refactor to include banned descendents
 var computedDescendents = function() {
-  var obj = {}, descendents;
+  var allowed = {}, banned = {};
   this.call(stack).call(map, function() { 
-    if (descendents = doctype.tags[this.name].computedDescendents) obj.call(merge, descendents);  });
-  return obj;
+    allowed.call(merge, doctype.tags[this.name].allowed_descendents || {});
+    banned.call(merge, doctype.tags[this.name].banned_descendents || {});  
+  });
+  allowed = allowed.merge(doctype.tags[this.name].allowed_children);
+  banned.call(each, function(name) { if (allowed[name]) delete allowed[name]; });
+  });
+  return allowed;
 };
 
 var expandList = function(groups) {
@@ -309,13 +313,13 @@ var htmlParser = function(html, doctype) {
   var index, match, endedTag, lastHtml = html, current = doc;
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
-  var min = function() { return Math.min.apply({}, this); }
+  var min = function() { return Math.min.apply({}, this); };
   var last = function() { return this[this.length - 1]; };
   
   var allowedDescendents = function() {
     var obj = {}, descendents;
     this.call(stack).call(map, function() { 
-      if (descendents = doctype.tags[this.name].allowedDescendents) obj.call(merge, descendents);  });
+      if (descendents = doctype.tags[this.name].allowed_descendents) obj.call(merge, descendents);  });
     return obj;
   };
   
