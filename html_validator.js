@@ -95,15 +95,22 @@ var englishList = function(separator) {
   return this.slice(0, this.length -1).join(", ")+(this.length > 1 ? (separator || " and ") : "")+(this[this.length - 1] || "");
 };
 
-var descendents = function(fn) { if (this.children) this.children.call(map, fn); };
-var prepend = function(string) { return string + this; };
 var inTag = function() { return "<"+this+">"; };
+var htmlTags = function() { return this.call(select, function() { return this.name != "#text" && this.name != "#comment"; }); };
 var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
 var combineArrays = function(a,b) { return (a || []).concat(b || []); }
 var addAttributes = function(array, b) { 
   var a = this;
   array.call(map, function() { a[this] = b[this]; }); 
 }
+
+// Refactor to include banned descendents
+var computedDescendents = function() {
+  var obj = {}, descendents;
+  this.call(stack).call(map, function() { 
+    if (descendents = doctype.tags[this.name].computedDescendents) obj.call(merge, descendents);  });
+  return obj;
+};
 
 var expandList = function(groups) {
   if (!this.indexOf) return this;
@@ -224,7 +231,7 @@ var doctype = {
         doc.all.call(map, function() {
           var tag = this;
           if (set.tags[tag.name] && tag.children) {
-            tag.children.call(map, function() {
+            tag.children.call(htmlTags).call(map, function() {
               if (!set.innerTags[this.name]) errors.push({parent: tag, child: this});
             });
           }
@@ -304,7 +311,6 @@ var htmlParser = function(html, doctype) {
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
   var last = function() { return this[this.length - 1]; };
-  var htmlTags = function() { return this.call(select, function() { return this.name != "#text" && this.name != "#comment"; }); };
   
   var allowedDescendents = function() {
     var obj = {}, descendents;
@@ -447,7 +453,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<head></head>\n<form><fieldset></fieldset><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<td>\n</tbody></table><table></table>\n</html>";
+var html = "<head><meta/></head>\n<form><fieldset></fieldset><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><table></table>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
