@@ -91,15 +91,6 @@ var reassemble = function() {
   return html;
 };
 
-var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
-var line = 1;
-var findLines = function() {
-  this.line = line; 
-  if (this.html) line += this.html.call(newlines);
-  if (this.children) this.children.call(map, function() { this.call(findLines); });
-  if (this.endHtml) line += this.endHtml.call(newlines);
-};
-
 var englishList = function(separator) {
   return this.slice(0, this.length -1).join(", ")+(this.length > 1 ? (separator || " and ") : "")+(this[this.length - 1] || "");
 };
@@ -313,10 +304,7 @@ var htmlParser = function(html, doctype) {
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); }
   var last = function() { return this[this.length - 1]; };
-  
-  var htmlChildren = function() { 
-    return this.children.call(select, function() { return this.name != "#text" && this.name != "#comment"; }); 
-  };
+  var htmlTags = function() { return this.call(select, function() { return this.name != "#text" && this.name != "#comment"; }); };
   
   var allowedDescendents = function() {
     var obj = {}, descendents;
@@ -326,19 +314,19 @@ var htmlParser = function(html, doctype) {
   };
   
   var parseStartTag = function(html, tag, rest, selfClosed) {
-    var prev = current.call(htmlChildren).call(last);
+    var prev = current.children.call(htmlTags).call(last);
     if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
       var implicit = false;
       doctype.tags[current.name].implicit_children.call(each, function(position) {
         if (implicit) return;
         if (doctype.tags[current.name].exact_children) {
-          if (this != tag && current.call(htmlChildren).length + 1 == position) {
+          if (this != tag && current.children.call(htmlTags).length + 1 == position) {
             implicit = this;
           }
         }
         else if (doctype.tags[current.name].ordered_children) {
           var orderedChildren = doctype.tags[current.name].ordered_children;
-          var children = current.call(htmlChildren);
+          var children = current.children.call(htmlTags);
           var invalidBeforeTags = children.call(select, function() { return orderedChildren[this] > position; }).length;
           if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
             implicit = this;
@@ -446,6 +434,15 @@ var htmlParser = function(html, doctype) {
     lastHtml = html;
   }
   parseEndTag("");
+  var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
+  var line = 1;
+  var findLines = function() {
+    this.line = line; 
+    if (this.html) line += this.html.call(newlines);
+    if (this.children) this.children.call(map, function() { this.call(findLines); });
+    if (this.endHtml) line += this.endHtml.call(newlines);
+  };
+  doc.call(findLines);
   return doc;
 };
 
@@ -458,7 +455,3 @@ console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
 console.log(spec.transitional.validate(doc));
-
-doc.call(findLines);
-console.log(doc.all.call(map, function() { return this.name+" "+this.line }));
-console.log(html);
