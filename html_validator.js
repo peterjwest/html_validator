@@ -237,27 +237,47 @@ var doctype = {
         if (doctype.groups.tags.all[this.name] || doctype.groups.tags.pseudo[this.name]) return [];
         return [this];
       },
-      allowed_children: function(doctype, doc, sets) {
+      allowed_children: function(doctype, doc) {
         var tag = this, errors = [];
         var allowedDescendents = tag.call(computedDescendents, doctype);
-        if (tag.children) {
-          tag.children.call(htmlTags).call(map, function() {
-            if (!allowedDescendents[this.name]) errors.push({parent: tag, child: this});
-          });
-        }
+        (tag.children || []).call(htmlTags).call(map, function() {
+          if (!allowedDescendents[this.name]) errors.push({parent: tag, child: this});
+        });
         return errors;
       },
-      /*allowed_descendents: function() {},
-      banned_descendents: function() {},
-      exact_children: function() {},
-      exclusive_children: function() {},
-      ordered_children: function() {},
-      required_first_child: function() {},
-      required_either_child: function() {},*/
-      required_children: function(doctype, doc, sets) {
-        var tag = this, errors = [];
+      exact_children: function(doctype, doc, sets) {
+        var tag = this, errors = [], set;
         sets.call(map, function() {
-          var set = this;
+          set = this;
+          if (set.tags[tag.name])
+            if ((tag.children || []).call(select, function(i) { return i != set.innerTags[this.name] - 1; }).length > 0) 
+              errors.push({parent: tag, children: set.innerTags});
+        });
+        return errors;
+      },
+      exclusive_children: function(doctype, doc, sets) {
+        var tag = this, errors = [], set;
+        sets.call(map, function() {
+          set = this;
+          if (set.tags[tag.name])
+            if ((tag.children || []).call(select, function() { return set.innerTags[this.name]; }).call(map, "name").call(makeMap).call(keys).length > 1)
+              errors.push({parent: tag, children: set.innerTags});
+        });
+        return errors;
+      },
+      ordered_children: function() {
+        return [];
+      },
+      required_first_child: function() {
+        return [];
+      },
+      required_either_child: function() {
+        return [];
+      },
+      required_children: function(doctype, doc, sets) {
+        var tag = this, errors = [], set;
+        sets.call(map, function() {
+          set = this;
           if (set.tags[tag.name]) {
             set.innerTags.call(each, function(innerTag) {
               var count = 0;
@@ -271,9 +291,9 @@ var doctype = {
         return errors;
       },
       unique_children: function(doctype, doc, sets) {
-        var tag = this, errors = [];
+        var tag = this, errors = [], set;
         sets.call(map, function() {
-          var set = this;
+          set = this;
           if (set.tags[tag.name]) {
             set.innerTags.call(each, function(innerTag) {
               var count = 0;
@@ -294,13 +314,15 @@ var doctype = {
       allowed_children: function() {
         return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
       },
-      /*allowed_descendents: function() {},
-      banned_descendents: function() {},
-      exact_children: function() {},
-      exclusive_children: function() {},
+      exact_children: function() {
+        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(htmlTags).call(map, "name").call(map, inTag).join(", ");
+      },
+      exclusive_children: function() {
+        return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, inTag).call(englishList)+" tags";
+      },
       ordered_children: function() {},
       required_first_child: function() {},
-      required_either_child: function() {},*/
+      required_either_child: function() {},
       required_children: function() {
         return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
       },
@@ -316,6 +338,7 @@ var htmlParser = function(html, doctype) {
   var endTag = /<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
   var doc = {name: '#root', children: [], all: []};
+  doc.all.push(doc);
   var index, match, endedTag, lastHtml = html, current = doc;
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); };
@@ -464,7 +487,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<head><foo></foo></head>\n<form><foo></foo></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><del><table></table></del>\n</html>";
+var html = "<head></head>\n<form></form><table>\n<col></col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><del><table></table></del>\n</body><foo></foo></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
