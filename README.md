@@ -12,8 +12,11 @@ I'd also like to use the platform to create an experimental doctype for best pra
 
 #TODO
 
-- Check for allowed descendents instead of allowed children
-- Don't worry about html text/comments
+- Check attributes are allowed
+- Check required attributes are present
+- Check attribute values are valid
+- Check code ignores comments/text where appropriate
+- Differentiate between cdata and whitespace
 - Check XHTML closing tags
 - Get computed self valued attributes
 - Ask John Resig about weird regex
