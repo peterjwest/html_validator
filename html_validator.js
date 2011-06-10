@@ -322,9 +322,11 @@ var htmlParser = function(html, doctype) {
   var last = function() { return this[this.length - 1]; };
   
   var allowedDescendents = function() {
-    var obj = {}, descendents;
+    var obj = {};
     this.call(stack).call(map, function() { 
-      if (descendents = doctype.tags[this.name].allowed_descendents) obj.call(merge, descendents);  });
+      obj.call(merge, doctype.tags[this.name].allowed_descendents || {}); 
+    });
+    obj.call(merge, doctype.tags[this.name].allowed_children || {});
     return obj;
   };
   
@@ -358,7 +360,7 @@ var htmlParser = function(html, doctype) {
     }
     
     if (doctype.groups.tags.close_optional[current.name]) {
-      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowedDescendents)[tag] && !doctype.groups.tags.last_child[current.name]) {
+      if (!current.call(allowedDescendents)[tag] && !doctype.groups.tags.last_child[current.name]) {
         parseEndTag("", current.name);
         return parseStartTag(html, tag, rest, selfClosed);
       }
