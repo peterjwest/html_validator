@@ -215,11 +215,11 @@ var doctype = {
     var doctype = this;
     errors = [];
     doctype.rules.rules.call(each2, function(rule, name) {
-      if (doctype.rulesets[name]) {
-        errors = errors.concat(doctype.call(rule, doctype.rulesets[name], doc, doctype).call(map, function() { 
+      doc.all.call(map, function() {
+        errors = errors.concat(this.call(rule, doctype, doc, doctype.rulesets[name]).call(map, function() { 
           return this.call(doctype.rules.messages[name]); 
         }));
-      }
+      });
     });
     return errors;
   },
@@ -233,17 +233,18 @@ var doctype = {
       names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
     },
     rules: {
-      allowed_children: function(sets, doc, doctype) {
-        var errors = [];
-        doc.all.call(map, function() {
-          var tag = this;
-          var allowedDescendents = tag.call(computedDescendents, doctype);
-          if (tag.children) {
-            tag.children.call(htmlTags).call(map, function() {
-              if (!allowedDescendents[this.name]) errors.push({parent: tag, child: this});
-            });
-          }
-        });
+      allowed_tags: function(doctype, doc) {
+        if (doctype.groups.tags.all[this.name] || doctype.groups.tags.pseudo[this.name]) return [];
+        return [this];
+      },
+      allowed_children: function(doctype, doc, sets) {
+        var tag = this, errors = [];
+        var allowedDescendents = tag.call(computedDescendents, doctype);
+        if (tag.children) {
+          tag.children.call(htmlTags).call(map, function() {
+            if (!allowedDescendents[this.name]) errors.push({parent: tag, child: this});
+          });
+        }
         return errors;
       },
       /*allowed_descendents: function() {},
@@ -253,46 +254,43 @@ var doctype = {
       ordered_children: function() {},
       required_first_child: function() {},
       required_either_child: function() {},*/
-      required_children: function(sets, doc) {
-        var errors = [];
+      required_children: function(doctype, doc, sets) {
+        var tag = this, errors = [];
         sets.call(map, function() {
           var set = this;
-          doc.all.call(map, function() {
-            var tag = this;
-            if (set.tags[tag.name]) {
-              set.innerTags.call(each, function(innerTag) {
-                var count = 0;
-                tag.children.call(map, function() {
-                  if (this.name == innerTag) count++;
-                });
-                if (count < 1) errors.push({parent: tag, child: innerTag, count: count});
+          if (set.tags[tag.name]) {
+            set.innerTags.call(each, function(innerTag) {
+              var count = 0;
+              (tag.children || []).call(map, function() {
+                if (this.name == innerTag) count++;
               });
-            }
-          });
+              if (count < 1) errors.push({parent: tag, child: innerTag, count: count});
+            });
+          }
         });
         return errors;
       },
-      unique_children: function(sets, doc) {
-        var errors = [];
+      unique_children: function(doctype, doc, sets) {
+        var tag = this, errors = [];
         sets.call(map, function() {
           var set = this;
-          doc.all.call(map, function() {
-            var tag = this;
-            if (set.tags[tag.name]) {
-              set.innerTags.call(each, function(innerTag) {
-                var count = 0;
-                tag.children.call(map, function() {
-                  if (this.name == innerTag) count++;
-                });
-                if (count > 1) errors.push({parent: tag, child: innerTag, count: count});
+          if (set.tags[tag.name]) {
+            set.innerTags.call(each, function(innerTag) {
+              var count = 0;
+              (tag.children || []).call(map, function() {
+                if (this.name == innerTag) count++;
               });
-            }
-          });
+              if (count > 1) errors.push({parent: tag, child: innerTag, count: count});
+            });
+          }
         });
         return errors;
       }
     },
     messages: {
+      allowed_tags: function() {
+        return this.name.call(inTag)+" is not a valid tag";
+      },
       allowed_children: function() {
         return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
       },
@@ -360,14 +358,14 @@ var htmlParser = function(html, doctype) {
     }
     
     if (doctype.groups.tags.close_optional[current.name]) {
-      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowedDescendents)[tag]) {
+      if (!doctype.tags[current.name].allowed_children[tag] && !current.call(allowedDescendents)[tag] && !doctype.groups.tags.last_child[current.name]) {
         parseEndTag("", current.name);
         return parseStartTag(html, tag, rest, selfClosed);
       }
     }
 
     //abstract for xhtml
-    var unary = doctype.groups.tags.unary[tag];
+    var unary = doctype.groups.tags.unary[tag] || selfClosed;
     
     var attrs = [];
     rest.replace(attr, function(match, name) {
@@ -464,7 +462,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<head><meta/></head>\n<form><fieldset></fieldset><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><dev><table></table></del>\n</html>";
+var html = "<head><foo></foo></head>\n<form><foo></foo></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><del><table></table></del>\n</html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
