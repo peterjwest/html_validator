@@ -216,7 +216,7 @@ var doctype = {
     errors = [];
     doctype.rules.rules.call(each2, function(rule, name) {
       doc.all.call(map, function() {
-        errors = errors.concat(this.call(rule, doctype, doc, doctype.rulesets[name]).call(map, function() { 
+        errors = errors.concat(this.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function() { 
           return this.call(doctype.rules.messages[name]); 
         }));
       });
@@ -250,7 +250,7 @@ var doctype = {
         sets.call(map, function() {
           set = this;
           if (set.tags[tag.name])
-            if ((tag.children || []).call(select, function(i) { return i != set.innerTags[this.name] - 1; }).length > 0) 
+            if ((tag.children || []).call(htmlTags).call(select, function(i) { return i != set.innerTags[this.name] - 1; }).length > 0) 
               errors.push({parent: tag, children: set.innerTags});
         });
         return errors;
@@ -265,14 +265,28 @@ var doctype = {
         });
         return errors;
       },
-      ordered_children: function() {
+      ordered_children: function(doctype, doc, sets) {
         return [];
       },
-      required_first_child: function() {
-        return [];
+      required_first_child: function(doctype, doc, sets) {
+        var tag = this, errors = [], set;
+        sets.call(map, function() {
+          set = this;
+          if (set.tags[tag.name])
+            if (tag.children && tag.children[0] && !set.innerTags[tag.children[0].name])
+              errors.push({parent: tag, child: set.innerTags.call(keys)[0]});
+        });
+        return errors;
       },
-      required_either_child: function() {
-        return [];
+      required_at_least_one_child: function(doctype, doc, sets) {
+        var tag = this, errors = [], set;
+        sets.call(map, function() {
+          set = this;
+          if (set.tags[tag.name])
+            if ((tag.children || []).call(select, function() { return set.innerTags[this.name]; }).call(map, "name").call(makeMap).call(keys).length < 1)
+              errors.push({parent: tag, children: set.innerTags});
+        });
+        return errors;
       },
       required_children: function(doctype, doc, sets) {
         var tag = this, errors = [], set;
@@ -315,14 +329,18 @@ var doctype = {
         return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
       },
       exact_children: function() {
-        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(htmlTags).call(map, "name").call(map, inTag).join(", ");
+        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(map, "name").call(map, inTag).join(", ");
       },
       exclusive_children: function() {
         return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, inTag).call(englishList)+" tags";
       },
       ordered_children: function() {},
-      required_first_child: function() {},
-      required_either_child: function() {},
+      required_first_child: function() {
+        return this.child.call(inTag)+" must be the first tag in a "+this.parent.name.call(inTag)+" tag";
+      },
+      required_at_least_one_child: function() {
+        return this.parent.name.call(inTag)+" must contain at least one of "+this.children.call(keys).call(map, inTag).call(englishList, " or ");
+      },
       required_children: function() {
         return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
       },
@@ -487,11 +505,11 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<head></head>\n<form></form><table>\n<col></col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><del><table></table></del>\n</body><foo></foo></html>";
+var html = "<head></head>\n<form><fieldset><foo></foo></fieldset></form><table>\n<col></col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><del><table></table></del>\n</body><foo></foo></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
-var doc = htmlParser(html, spec.transitional);
+var doc = htmlParser(html, spec.frameset);
 console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
-console.log(spec.transitional.validate(doc));
+console.log(spec.frameset.validate(doc));
