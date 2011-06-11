@@ -12,10 +12,12 @@ var html_401_spec = function(doctype) {
         cdata_elements: 'script,style',
         close_optional: 'body,colgroup,dd,dt,head,html,li,option,p,tbody,td,tfoot,th,thead,tr',
         document_body: 'body',
+        last_child: 'body,html,#root',
         flow: 'inline,block',
         form_controls: 'input,select,textarea,label,button',
         font_style: 'tt,i,b,big,small',
         phrase: 'abbr,acronym,cite,code,dfn,em,kbd,strong,samp,var',
+        pseudo: '#pdata,#cdata,#text,#comment',
         special: 'a,img,object,br,script,map,q,sub,sup,span,bdo',
         heading: 'h1,h2,h3,h4,h5,h6',
         implicit: 'body,head,html,tbody',
@@ -260,11 +262,12 @@ var html_401_spec = function(doctype) {
     rulesets: {
       allowed_children: [
         //{tags: 'frameset', innerTags: 'frame,frameset,noframes'}, 
+        {tags: 'frameset', innerTags: 'frame,noframes'}, 
         {tags: 'noframes', innerTags: 'noframes_content'}
       ],
       banned_descendents: [{tags: 'noframes', innerTags: 'noframes'}],
       exact_children: [{tags: 'noframes', innerTags: 'noframes_content'}],
-      required_either_child: [{tags: 'frameset', innerTags: 'frameset,frame'}]
+      required_at_least_one_child: [{tags: 'frameset', innerTags: 'frameset,frame'}]
     }
   });
 };
