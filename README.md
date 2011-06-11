@@ -12,6 +12,9 @@ I'd also like to use the platform to create an experimental doctype for best pra
 
 #TODO
 
+- Check unary tags are unary & visa versa
+- Check non empty tags are not empty
+- Check non optionally closed tags are closed properly
 - Check attributes are allowed
 - Check required attributes are present
 - Check attribute values are valid
@@ -22,6 +25,14 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Ask John Resig about weird regex
 - Log CDATA/comment sections in cdata
 - Parse comment end tag
+
+#The Parser
+
+Here I'll explain how the parser works, some of the intricacies of HTML, and how they are handled by the parser.
+
+#Doctypes
+
+Here I'll explain the format of the doctypes.
 
 #HTML Doctype Bugs
 
