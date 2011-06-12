@@ -217,11 +217,12 @@ var doctype = {
     doctype.rules.rules.call(each2, function(rule, name) {
       doc.all.call(map, function() {
         errors = errors.concat(this.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function() { 
-          return this.call(doctype.rules.messages[name]); 
+          this.message = this.call(doctype.rules.messages[name]);
+          return this;
         }));
       });
     });
-    return errors;
+    return errors.sort(function(a, b) { return a.line - b.line; }).call(map, function() { return this.message+" on line "+this.line; }).join("\n");
   },
   
   rules: {
@@ -241,7 +242,7 @@ var doctype = {
         var tag = this, errors = [];
         var allowedDescendents = tag.call(computedDescendents, doctype);
         (tag.children || []).call(htmlTags).call(map, function() {
-          if (!allowedDescendents[this.name]) errors.push({parent: tag, child: this});
+          if (!allowedDescendents[this.name]) errors.push({parent: tag, child: this, line: this.line});
         });
         return errors;
       },
@@ -251,7 +252,7 @@ var doctype = {
           set = this;
           if (set.tags[tag.name])
             if ((tag.children || []).call(htmlTags).call(select, function(i) { return i != set.innerTags[this.name] - 1; }).length > 0) 
-              errors.push({parent: tag, children: set.innerTags});
+              errors.push({parent: tag, children: set.innerTags, line: tag.line});
         });
         return errors;
       },
@@ -261,7 +262,7 @@ var doctype = {
           set = this;
           if (set.tags[tag.name])
             if ((tag.children || []).call(select, function() { return set.innerTags[this.name]; }).call(map, "name").call(makeMap).call(keys).length > 1)
-              errors.push({parent: tag, children: set.innerTags});
+              errors.push({parent: tag, children: set.innerTags, line: tag.line });
         });
         return errors;
       },
@@ -272,9 +273,15 @@ var doctype = {
         var tag = this, errors = [], set;
         sets.call(map, function() {
           set = this;
-          if (set.tags[tag.name])
-            if (tag.children && tag.children[0] && !set.innerTags[tag.children[0].name])
-              errors.push({parent: tag, child: set.innerTags.call(keys)[0]});
+          if (set.tags[tag.name]) {
+            if ((tag.children || []).call(htmlTags).length > 0) {
+              tag.children.call(htmlTags).call(map, function(i) {
+                if (i == 0 && !set.innerTags[this.name]) 
+                  errors.push({parent: tag, child: set.innerTags.call(keys)[0], line: tag.line});
+              });
+            }
+            else errors.push({parent: tag, child: set.innerTags.call(keys)[0], line: tag.line});
+          } 
         });
         return errors;
       },
@@ -284,7 +291,7 @@ var doctype = {
           set = this;
           if (set.tags[tag.name])
             if ((tag.children || []).call(select, function() { return set.innerTags[this.name]; }).call(map, "name").call(makeMap).call(keys).length < 1)
-              errors.push({parent: tag, children: set.innerTags});
+              errors.push({parent: tag, children: set.innerTags, line: tag.line});
         });
         return errors;
       },
@@ -298,7 +305,7 @@ var doctype = {
               (tag.children || []).call(map, function() {
                 if (this.name == innerTag) count++;
               });
-              if (count < 1) errors.push({parent: tag, child: innerTag, count: count});
+              if (count < 1) errors.push({parent: tag, child: innerTag, count: count, line: tag.line});
             });
           }
         });
@@ -314,7 +321,7 @@ var doctype = {
               (tag.children || []).call(map, function() {
                 if (this.name == innerTag) count++;
               });
-              if (count > 1) errors.push({parent: tag, child: innerTag, count: count});
+              if (count > 1) errors.push({parent: tag, child: innerTag, count: count, line: tag.line});
             });
           }
         });
@@ -336,7 +343,7 @@ var doctype = {
       },
       ordered_children: function() {},
       required_first_child: function() {
-        return this.child.call(inTag)+" must be the first tag in a "+this.parent.name.call(inTag)+" tag";
+        return this.parent.name.call(inTag)+" tag's contents must start with "+this.child.call(inTag)+" tag";
       },
       required_at_least_one_child: function() {
         return this.parent.name.call(inTag)+" must contain at least one of "+this.children.call(keys).call(map, inTag).call(englishList, " or ");
@@ -345,7 +352,7 @@ var doctype = {
         return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
       },
       unique_children: function() {
-        return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+", found "+this.count;
+        return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+" tag, found "+this.count;
       }
     }
   }
@@ -407,9 +414,7 @@ var htmlParser = function(html, doctype) {
       }
     }
 
-    //abstract for xhtml
-    var unary = doctype.groups.tags.unary[tag] || selfClosed;
-    
+    var unary = doctype.groups.tags.unary[tag] || !!selfClosed;
     var attrs = [];
     rest.replace(attr, function(match, name) {
       //replace self_value with element's computed attributes which can have no value
@@ -505,11 +510,12 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<head></head>\n<form><fieldset><foo></foo></fieldset></form><table>\n<col></col>\n<tfoot><tr><td></tfoot>\n<tr><td>\n</tbody></table><del><table></table></del>\n</body><foo></foo></html>";
+var html = "<title></title>\n<form><fieldset><foo></fieldset>\n</form><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
-var doc = htmlParser(html, spec.frameset);
+var doc = htmlParser(html, spec.transitional);
 console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
-console.log(spec.frameset.validate(doc));
+console.log(html);
+console.log(spec.transitional.validate(doc));
