@@ -25,6 +25,7 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Ask John Resig about weird regex
 - Log CDATA/comment sections in cdata
 - Parse comment end tag
+- Fix problem with frameset as frameset child
 
 #The Parser
 
