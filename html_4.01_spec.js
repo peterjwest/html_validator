@@ -198,7 +198,7 @@ var html_401_spec = function(doctype) {
     attrs: {
       required: [
         {attrs: 'size', include: 'basefont', values: '#cdata'},
-        {attrs: 'height,width', include: 'applet,iframe,td,th', values: '#length'}
+        {attrs: 'height,width', include: 'applet', values: '#length'}
       ],
       optional: [
         {attrs: 'align', include: 'hr,table', values: 'left,center,right'},
@@ -215,6 +215,7 @@ var html_401_spec = function(doctype) {
         {attrs: 'compact', include: 'dir,dl,menu,ol,ul', values: '#self'},
         {attrs: 'face', include: 'basefont,font', values: '#cdata'},
         {attrs: 'frameborder', include: 'frame_elements', values: '1,0'},
+        {attrs: 'height,width', include: 'iframe,td,th', values: '#length'},
         {attrs: 'hspace,vspace', include: 'applet,img,object', values: '#number'},
         {attrs: 'language', include: 'script', values: '#cdata'},
         {attrs: 'longdesc,marginheight,marginwidth', include: 'frame_elements', values: '#number'},
