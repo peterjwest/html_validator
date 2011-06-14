@@ -260,8 +260,9 @@ var doctype = {
       allowed_attributes: function(doctype, doc) {
         var tag = this, attrs = [];
         var allowed = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.optional) || {});
+        var required = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {});
         (tag.attrs || []).call(map, function() {
-          if (!allowed[this.name]) attrs.push(this.name);
+          if (!allowed[this.name] && !required[this.name]) attrs.push(this.name);
         });
         if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
         return [];
@@ -326,7 +327,7 @@ var doctype = {
       required_attributes: function(doctype, doc) {
         var tag = this, attrs = [];
         ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(name) {
-          if (!tag.attrs || !tag.attrs[name]) attrs.push(name);
+          if (!tag.attrs || !tag.attrs.call(map, "name").call(makeMap)[name]) { attrs.push(name); }
         });
         if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
         return [];
@@ -503,7 +504,6 @@ var htmlParser = function(html, doctype) {
     var attrs = [];
     rest.replace(attr, function(match, name) {
       var value = arguments[2] || arguments[3] || arguments[4] || (doctype.tags[tag].attrs.optional[name] || doctype.tags[tag].attrs.required[name] ? name : "");
-      console.log(value);
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
     var element = { name: tag, implicit: !html, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], html: html };
@@ -593,15 +593,13 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title>\n<form><input ismap><fieldset monkey='food' banana=\"yeah!\"class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title>\n<form action=''><fieldset><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><div><img alt src=''></div><table>\n<col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td></tbody></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
 console.log(spec);
 console.log(doc);
 console.log(doc.call(draw));
-console.log(html);
 console.log(spec.transitional.validate(doc));
 
 Object.prototype.call = call;
