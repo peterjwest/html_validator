@@ -66,6 +66,11 @@ var clone = function() {
   return obj;
 };
 
+var groupUnique = function() {
+  var last, different;
+  return this.call(select, function() { different = last != this+""; last = this; return different; });
+};
+
 var makeMap = function() {
   var obj = {};
   this.call(map, function(i) { obj[this] = i+1 });
@@ -267,7 +272,20 @@ var doctype = {
         return errors;
       },
       ordered_children: function(doctype, doc, sets) {
-        return [];
+        var tag = this, errors = [], sets, position, error;
+        sets.call(map, function() { 
+          set = this;
+          if (set.tags[tag.name]) {
+            error = false;
+            position = 1;
+            (tag.children || []).call(htmlTags).call(map, function(i) {
+              if (set.innerTags[this.name] >= position) position = set.innerTags[this.name];
+              else { error = true; console.log(this.name+""); }
+            });
+            if (error) errors.push({parent: tag, children: set.innerTags, line: tag.line});
+          }
+        });
+        return errors;
       },
       required_first_child: function(doctype, doc, sets) {
         var tag = this, errors = [], set;
@@ -341,9 +359,11 @@ var doctype = {
       exclusive_children: function() {
         return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, inTag).call(englishList)+" tags";
       },
-      ordered_children: function() {},
+      ordered_children: function() {
+        return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
+      },
       required_first_child: function() {
-        return this.parent.name.call(inTag)+" tag's contents must start with "+this.child.call(inTag)+" tag";
+        return "The contents of "+this.parent.name.call(inTag)+" tag must start with "+this.child.call(inTag)+" tag";
       },
       required_at_least_one_child: function() {
         return this.parent.name.call(inTag)+" must contain at least one of "+this.children.call(keys).call(map, inTag).call(englishList, " or ");
@@ -510,7 +530,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title>\n<form><fieldset><foo></fieldset>\n</form><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title>\n<form><fieldset><foo></fieldset>\n</form><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
