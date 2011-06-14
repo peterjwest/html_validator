@@ -31,8 +31,7 @@ var html_401_spec = function(doctype) {
         without_title: 'base,head,html,meta,param,script,title'
       },
       attrs: {
-        standard_events: 'onclick,ondblclick,onkeydown,onkeypress,onkeyup,onmousedown,onmousemove,onmouseout,onmouseover,onmouseup',
-        self_value: 'checked,declare,defer,disabled,http-equiv,name,ismap,multiple,nohref,readonly,selected'
+        standard_events: 'onclick,ondblclick,onkeydown,onkeypress,onkeyup,onmousedown,onmousemove,onmouseout,onmouseover,onmouseup'
       }
     },
     attrs: {
@@ -190,9 +189,6 @@ var html_401_spec = function(doctype) {
         unary: '+basefont,isindex',
         without_lang: '+basefont,applet,frame_elements',
         without_title: '+basefont'
-      },
-      attrs: {
-        self_value: '+compact,noshade,nowrap'
       }
     },
     attrs: {
@@ -249,9 +245,6 @@ var html_401_spec = function(doctype) {
         implicit: '+frameset',
         noframes_content: 'body',
         unary: '+frame'
-      },
-      attrs: {
-        self_value: '+noresize'
       }
     },
     attrs: {
