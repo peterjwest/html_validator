@@ -26,6 +26,7 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Log CDATA/comment sections in cdata
 - Parse comment end tag
 - Fix problem with frameset as frameset child
+- Fix array methods (map, select etc.) to call as parameter rather than in scope
 
 #The Parser
 
