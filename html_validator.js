@@ -257,6 +257,15 @@ var doctype = {
       names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
     },
     rules: {
+      allowed_attributes: function(doctype, doc) {
+        var tag = this, attrs = [];
+        var allowed = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.optional) || {});
+        (tag.attrs || []).call(map, function() {
+          if (!allowed[this.name]) attrs.push(this.name);
+        });
+        if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
+        return [];
+      },
       allowed_tags: function(doctype, doc) {
         if (doctype.groups.tags.all[this.name] || doctype.groups.tags.pseudo[this.name]) return [];
         return [this];
@@ -315,9 +324,8 @@ var doctype = {
         return errors;
       },
       required_attributes: function(doctype, doc) {
-        var tag = this, errors = [], attrs;
-        attrs = [];
-        ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || []).call(each, function(name) {
+        var tag = this, attrs = [];
+        ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(name) {
           if (!tag.attrs || !tag.attrs[name]) attrs.push(name);
         });
         if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
@@ -386,6 +394,9 @@ var doctype = {
       }
     },
     messages: {
+      allowed_attributes: function() {
+        return this.tag.name.call(inTag)+" can't have attribute"+(this.attrs.length > 1 ? "s" : "")+" "+this.attrs.call(englishList, " or ");
+      },
       allowed_tags: function() {
         return this.name.call(inTag)+" is not a valid element";
       },
@@ -411,7 +422,7 @@ var doctype = {
         return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
       },
       required_attributes: function() {
-        return this.tag.name.call(inTag)+" must have attributes "+this.attrs.call(englishList);
+        return this.tag.name.call(inTag)+" must have attribute"+(this.attrs.length > 1 ? "s" : "")+" "+this.attrs.call(englishList);
       },
       required_first_child: function() {
         return "The contents of "+this.parent.name.call(inTag)+" must start with "+this.child.call(inTag);
@@ -583,7 +594,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title>\n<form><fieldset class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title>\n<form><fieldset monkey='food' banana=\"yeah!\"class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);

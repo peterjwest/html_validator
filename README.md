@@ -12,7 +12,6 @@ I'd also like to use the platform to create an experimental doctype for best pra
 
 #TODO
 
-- Check attributes are allowed
 - Check attribute values are valid
 - Check code ignores comments/text where appropriate
 - Differentiate between cdata and whitespace
