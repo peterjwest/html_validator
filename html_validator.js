@@ -274,8 +274,11 @@ var doctype = {
       not_empty: function(doctype, doc) {
         return (doctype.groups.tags.not_empty[this.name] && this.children.call(htmlTags).length == 0) ? [{tag: this, line: this.line}] : [];
       },
-      not_implicit: function(doctype, doc) {
+      not_opened: function(doctype, doc) {
         return (this.unopened) ? [{tag: this, line: this.line}] : [];
+      },
+      not_optionally_closed: function(doctype, doc) {
+        return (!doctype.groups.tags.close_optional[this.name] && !doctype.groups.tags.unary[this.name] && !this.closed) ? [{tag: this, line: this.line}] : [];
       },
       ordered_children: function(doctype, doc, sets) {
         var tag = this, errors = [], sets, position, error;
@@ -371,8 +374,11 @@ var doctype = {
       not_empty: function() {
         return this.tag.name.call(inTag)+" can't be empty";
       },
-      not_implicit: function() {
+      not_opened: function() {
         return this.tag.name.call(inTag)+" must have an opening tag";
+      },
+      not_optionally_closed: function() {
+        return this.tag.name.call(inTag)+" must have a closing tag";
       },
       ordered_children: function() {
         return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
@@ -400,7 +406,7 @@ var htmlParser = function(html, doctype) {
   var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
   var endTag = /<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
-  var doc = {name: '#root', children: [], all: []};
+  var doc = {name: '#root', children: [], all: [], closed: true};
   doc.all.push(doc);
   var index, match, endedTag, lastHtml = html, current = doc;
   var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
@@ -491,7 +497,7 @@ var htmlParser = function(html, doctype) {
       return parseEndTag(html, tag);
     }
     else { 
-      var element = {name: tag, unopened: true, endHtml: html};
+      var element = {name: tag, unopened: true, closed: true, endHtml: html};
       current.children.push(element);
       doc.all.push(element);
     }

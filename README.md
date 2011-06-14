@@ -12,7 +12,6 @@ I'd also like to use the platform to create an experimental doctype for best pra
 
 #TODO
 
-- Check non optionally closed elements are closed properly
 - Check attributes are allowed
 - Check required attributes are present
 - Check attribute values are valid
@@ -48,4 +47,4 @@ Here I'll explain the format of the doctypes.
 
 #HTML W3C Validator Bugs
 
-- Fails when table has no tbody or tbody children
+- Fails when implicit tags have no children (e.g. table has no tbody or tbody children)
