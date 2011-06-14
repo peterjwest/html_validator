@@ -271,6 +271,10 @@ var doctype = {
         });
         return errors;
       },
+      not_empty: function(doctype, doc) {
+        if (doctype.groups.tags.not_empty[this.name] && this.children.call(htmlTags).length == 0) return [{tag: this, line: this.line}];
+        return [];
+      },
       ordered_children: function(doctype, doc, sets) {
         var tag = this, errors = [], sets, position, error;
         sets.call(map, function() { 
@@ -348,7 +352,7 @@ var doctype = {
     },
     messages: {
       allowed_tags: function() {
-        return this.name.call(inTag)+" is not a valid tag";
+        return this.name.call(inTag)+" is not a valid element";
       },
       allowed_children: function() {
         return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
@@ -357,13 +361,16 @@ var doctype = {
         return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(map, "name").call(map, inTag).join(", ");
       },
       exclusive_children: function() {
-        return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, inTag).call(englishList)+" tags";
+        return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, inTag).call(englishList);
+      },
+      not_empty: function() {
+        return this.tag.name.call(inTag)+" can't be empty";
       },
       ordered_children: function() {
         return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
       },
       required_first_child: function() {
-        return "The contents of "+this.parent.name.call(inTag)+" tag must start with "+this.child.call(inTag)+" tag";
+        return "The contents of "+this.parent.name.call(inTag)+" must start with "+this.child.call(inTag);
       },
       required_at_least_one_child: function() {
         return this.parent.name.call(inTag)+" must contain at least one of "+this.children.call(keys).call(map, inTag).call(englishList, " or ");
@@ -372,7 +379,7 @@ var doctype = {
         return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
       },
       unique_children: function() {
-        return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+" tag, found "+this.count;
+        return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+", found "+this.count;
       }
     }
   }

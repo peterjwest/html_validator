@@ -13,7 +13,6 @@ I'd also like to use the platform to create an experimental doctype for best pra
 #TODO
 
 - Check unary tags are unary & visa versa
-- Check non empty tags are not empty
 - Check non optionally closed tags are closed properly
 - Check attributes are allowed
 - Check required attributes are present
