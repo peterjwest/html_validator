@@ -502,8 +502,8 @@ var htmlParser = function(html, doctype) {
     var unary = doctype.groups.tags.unary[tag] || !!selfClosed;
     var attrs = [];
     rest.replace(attr, function(match, name) {
-      //replace self_value with element's computed attributes which can have no value
-      var value = arguments[2] || arguments[3] || arguments[4] || (doctype.groups.attrs.self_value[name] ? name : "");
+      var value = arguments[2] || arguments[3] || arguments[4] || (doctype.tags[tag].attrs.optional[name] || doctype.tags[tag].attrs.required[name] ? name : "");
+      console.log(value);
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
     var element = { name: tag, implicit: !html, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], html: html };
@@ -594,7 +594,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title>\n<form><fieldset monkey='food' banana=\"yeah!\"class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title>\n<form><input ismap><fieldset monkey='food' banana=\"yeah!\"class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
