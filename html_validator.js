@@ -10,16 +10,7 @@ Object.prototype.call = function(fn) {
 };
 
 var each = function(fn) {
-  for(var i in this)
-    if (this.call(Object.hasOwnProperty, i))
-      if (this[i] !== null && this[i] !== undefined) this[i].call(fn, i, this);
-  return this;
-};
-
-var each2 = function(fn) {
-  for(var i in this)
-    if (this.call(Object.hasOwnProperty, i))
-      if (this[i] !== null && this[i] !== undefined) this.call(fn, this[i], i, this);
+  for(var i in this) if (this.call(Object.hasOwnProperty, i)) this.call(fn, this[i], i, this);
   return this;
 };
 
@@ -33,11 +24,24 @@ var map = function(fn, all) {
   return array;
 };
 
+var map2 = function(fn) {
+  if (typeof(fn) == 'string') var attrFn = function() { return this[fn]; };
+  var array = [];
+  for (var i = 0, obj; i < this.length; i++) array.push(this.call(attrFn || fn, this[i], i));
+  return array;
+};
+
 var get = function(key) { return function() { return this[key] }; };
 
 var select = function(fn) {
   var array = [];
   this.call(map, function(i) { if (this.call(fn, i)) array.push(this); })
+  return array;
+};
+
+var select2 = function(fn) {
+  var array = [];
+  this.call(map2, function(item, i) { if (this.call(fn, item, i)) array.push(item); })
   return array;
 };
 
@@ -48,22 +52,28 @@ var sum = function(){
 
 var mapEach = function(fn) {
   var array = [];
-  this.call(each, function(name) { array.push(this.call(fn, name)); });
+  this.call(each, function(item, name) { array.push({}.call(fn, item, name)); });
   return array;
 };
 
-var values = function() { return this.call(mapEach, function() { return this; }); };
-var keys = function() { return this.call(mapEach, function(key) { return key; }); };
+var values = function() { return this.call(mapEach, function(item) { return item; }); };
+var keys = function() { return this.call(mapEach, function(item, key) { return key; }); };
 
 var merge = function(b) {
   var a = this;
-  b.call(each, function(name) { a[name] = this; });
+  b.call(each, function(item, name) { a[name] = item; });
   return this;
 };
 
 var clone = function() {
   var obj = {};
-  this.call(each, function(name) { obj[name] = this; });
+  this.call(each, function(item, name) { obj[name] = item; });
+  return obj;
+};
+
+var clone2 = function(obj) {
+  var obj = {};
+  obj.call(each, function(item, name) { obj[name] = item; });
   return obj;
 };
 
@@ -74,7 +84,7 @@ var groupUnique = function() {
 
 var makeMap = function() {
   var obj = {};
-  this.call(map, function(i) { obj[this] = i+1 });
+  this.call(map2, function(item, i) { obj[item] = i + 1; });
   return obj;
 };
 
@@ -83,7 +93,7 @@ var draw = function(indent) {
   if (this.unopened) text += (indent||"")+"</"+this.name+">\n";
   else {
     text += (indent||"")+(this.implicit ? "{<"+this.name+">}" : "<"+this.name+">")+"\n";
-    if (this.children) text += this.children.call(map, function() { return this.call(draw, (indent||"")+"  "); }).join("");
+    if (this.children) text += this.children.call(map2, function(child) { return child.call(draw, (indent||"")+"  "); }).join("");
     if (!this.unary && !this.selfClosed) text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "{</"+this.name+">}\n");
   }
   return text;
@@ -92,7 +102,7 @@ var draw = function(indent) {
 var reassemble = function() {
   var html = "";
   if (this.html) html += this.html;
-  if (this.children) html += this.children.call(map, function() { return this.call(reassemble); }).join("");
+  if (this.children) html += this.children.call(map2, function(child) { return child.call(reassemble); }).join("");
   if (this.endHtml) html += this.endHtml;
   return html;
 };
@@ -107,33 +117,32 @@ var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.sli
 var combineArrays = function(a,b) { return (a || []).concat(b || []); }
 var addAttributes = function(array, b) { 
   var a = this;
-  array.call(map, function() { a[this] = b[this]; }); 
+  array.call(map2, function(item) { a[item] = b[item]; }); 
 }
 var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
 
 var computedDescendents = function(doctype) {
   var allowed = {}, banned = {};
-  this.call(stack).call(map, function() {
-    if (doctype.tags[this.name]) {
-      allowed.call(merge, doctype.tags[this.name].allowed_descendents || {});
-      banned.call(merge, doctype.tags[this.name].banned_descendents || {});  
+  this.call(stack).call(map2, function(element) {
+    if (doctype.tags[element.name]) {
+      allowed.call(merge, doctype.tags[element.name].allowed_descendents || {});
+      banned.call(merge, doctype.tags[element.name].banned_descendents || {});  
     }
   });
   if (doctype.tags[this.name]) {
     allowed = allowed.call(merge, doctype.tags[this.name].allowed_children || {});
   }
-  banned.call(each, function(name) { if (allowed[name]) delete allowed[name]; });
+  banned.call(each, function(item, name) { if (allowed[name]) delete allowed[name]; });
   return allowed;
 };
 
 var expandList = function(groups) {
   if (!this.indexOf) return this;
   var map = this.split(",").call(makeMap);
-  map.call(each, function(name) {
-    var value = this;
+  map.call(each, function(value, name) {
     if (groups[name]) {
       delete map[name];
-      map.call(merge, groups[name].call(expandList, groups).call(each, function(tag, group) { group[tag] = value; }));
+      map.call(merge, groups[name].call(expandList, groups).call(each, function(item, tag, group) { group[tag] = value; }));
     }
   });
   return map;
@@ -145,19 +154,19 @@ var doctype = {
   rulesets: {},
   
   extend: function(spec) {
-    this.groups.call(each, function(type) {
+    this.groups.call(each, function(groups, type) {
       spec.groups[type] = spec.groups[type] || {};
-      this.call(each, function(group) {
-        spec.groups[type][group] = combineLists(this, spec.groups[type][group]);
+      groups.call(each, function(group, name) {
+        spec.groups[type][name] = combineLists(group, spec.groups[type][name]);
       });
     });
     spec.attrs = spec.attrs || {};
-    this.attrs.call(each, function(type) {
-      spec.attrs[type] = combineArrays(this, spec.attrs[type]);
+    this.attrs.call(each, function(attrs, type) {
+      spec.attrs[type] = combineArrays(attrs, spec.attrs[type]);
     });
     spec.rulesets = spec.rulesets || {};
-    this.rulesets.call(each, function(name) {
-      spec.rulesets[name] = combineArrays(this.call(map, clone), spec.rulesets[name]);
+    this.rulesets.call(each, function(rulesets, name) {
+      spec.rulesets[name] = combineArrays(rulesets.call(map, clone), spec.rulesets[name]);
     });
     spec.call(addAttributes, ['extend','compute','validate','rules'], this);
     return spec;
@@ -166,42 +175,41 @@ var doctype = {
   compute: function() {
     if (this.computed) return;
     this.computed = true;
-    this.groups.call(each, function(type) {
-      var groupType = this;
-      this.call(each, function(group) {
-        groupType[group] = this.call(expandList, groupType);
+    this.groups.call(each, function(groupType, type) {
+      groupType.call(each, function(group, name) {
+        groupType[name] = group.call(expandList, groupType);
       });
     });
     var groups = this.groups;
-    this.attrs.call(each, function() {
-      this.call(map, function() {
+    this.attrs.call(each, function(attrs) {
+      attrs.call(map, function() {
         var attr_rule = this;
         this.attrs = this.attrs.call(expandList, groups.attrs);
-        this.attrs.call(each, function(name) {
+        this.attrs.call(each, function(attr, name) {
           attr_rule.attrs[name] = attr_rule.values;
         });
         if (this.include) this.include = this.include.call(expandList, groups.tags);
         if (this.exclude) this.exclude = this.exclude.call(expandList, groups.tags);
       });
     });
-    this.rulesets.call(each, function(name) {
-      this.call(map, function() {
-        this.call(each, function(type, rule) {
-          rule[type] = this.call(expandList, groups.tags, true);
+    this.rulesets.call(each, function(ruleset, name) {
+      ruleset.call(map, function() {
+        this.call(each, function(rule, type, rules) {
+          rules[type] = rule.call(expandList, groups.tags, true);
         });
       });
     });
     var tags = this.tags = groups.tags.all.call(clone);
-    tags.call(each, function(name) {
+    tags.call(each, function(tag, name) {
       tags[name] = {};
     });
-    this.rulesets.call(each, function(ruleName) {
-      this.call(map, function(i) {
+    this.rulesets.call(each, function(rules, ruleName) {
+      rules.call(map, function(i) {
         var innerTags = this.innerTags;
-        this.tags.call(each, function(name) {
+        this.tags.call(each, function(tag, name) {
           tags[name][ruleName] = tags[name][ruleName] || {};
-          innerTags.call(each, function(childName) {
-            tags[name][ruleName][childName] = this;
+          innerTags.call(each, function(child, childName) {
+            tags[name][ruleName][childName] = child;
             if (ruleName == "allowed_children" && tags[childName]) {
               tags[childName].allowed_parents = tags[childName].allowed_parents || {};
               tags[childName].allowed_parents[name] = true;
@@ -211,12 +219,11 @@ var doctype = {
       });
     });
     var attrs = this.attrs;
-    this.tags.call(each, function(name) {
-      var tag = this;
-      attrs.call(each, function(type) {
+    this.tags.call(each, function(tag, name) {
+      attrs.call(each, function(attrs, type) {
         tag.attrs = tag.attrs || {};
         tag.attrs[type] = tag.attrs[type] || {};
-        this.call(map, function() {
+        attrs.call(map, function() {
           if ((this.include && this.include[name]) || (this.exclude && !this.exclude[name])) {
             tag.attrs[type] = tag.attrs[type].call(merge, this.attrs);
           }
@@ -224,9 +231,9 @@ var doctype = {
       });
     });
 
-    groups.tags.implicit.call(each, function(name) {
+    groups.tags.implicit.call(each, function(tag, name) {
       if (tags[name].allowed_parents) {
-        tags[name].allowed_parents.call(each, function(parentName) {
+        tags[name].allowed_parents.call(each, function(parent, parentName) {
           tags[parentName].implicit_children = tags[parentName].implicit_children || {};
           tags[parentName].implicit_children[(tags[parentName].exact_children || tags[parentName].ordered_children)[name]] = name;
         });
@@ -237,7 +244,7 @@ var doctype = {
   validate: function(doc) {
     var doctype = this;
     errors = [];
-    doctype.rules.rules.call(each2, function(rule, name) {
+    doctype.rules.rules.call(each, function(rule, name) {
       doc.all.call(map, function() {
         errors = errors.concat(this.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function() { 
           this.message = this.call(doctype.rules.messages[name]);
@@ -326,7 +333,7 @@ var doctype = {
       },
       required_attributes: function(doctype, doc) {
         var tag = this, attrs = [];
-        ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(name) {
+        ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(required, name) {
           if (!tag.attrs || !tag.attrs.call(map, "name").call(makeMap)[name]) { attrs.push(name); }
         });
         if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
@@ -363,12 +370,12 @@ var doctype = {
         sets.call(map, function() {
           set = this;
           if (set.tags[tag.name]) {
-            set.innerTags.call(each, function(innerTag) {
+            set.innerTags.call(each, function(innerTag, name) {
               var count = 0;
               (tag.children || []).call(map, function() {
-                if (this.name == innerTag) count++;
+                if (this.name == name) count++;
               });
-              if (count < 1) errors.push({parent: tag, child: innerTag, count: count, line: tag.line});
+              if (count < 1) errors.push({parent: tag, child: name, count: count, line: tag.line});
             });
           }
         });
@@ -382,12 +389,12 @@ var doctype = {
         sets.call(map, function() {
           set = this;
           if (set.tags[tag.name]) {
-            set.innerTags.call(each, function(innerTag) {
+            set.innerTags.call(each, function(innerTag, name) {
               var count = 0;
               (tag.children || []).call(map, function() {
-                if (this.name == innerTag) count++;
+                if (this.name == name) count++;
               });
-              if (count > 1) errors.push({parent: tag, child: innerTag, count: count, line: tag.line});
+              if (count > 1) errors.push({parent: tag, child: name, count: count, line: tag.line});
             });
           }
         });
@@ -468,11 +475,11 @@ var htmlParser = function(html, doctype) {
     var prev = current.children.call(htmlTags).call(last);
     if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
       var implicit = false;
-      doctype.tags[current.name].implicit_children.call(each, function(position) {
+      doctype.tags[current.name].implicit_children.call(each, function(implicitChild, position) {
         if (implicit) return;
         if (doctype.tags[current.name].exact_children) {
-          if (this != tag && current.children.call(htmlTags).length + 1 == position) {
-            implicit = this;
+          if (implicitChild != tag && current.children.call(htmlTags).length + 1 == position) {
+            implicit = implicitChild;
           }
         }
         else if (doctype.tags[current.name].ordered_children) {
@@ -480,7 +487,7 @@ var htmlParser = function(html, doctype) {
           var children = current.children.call(htmlTags);
           var invalidBeforeTags = children.call(select, function() { return orderedChildren[this] > position; }).length;
           if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
-            implicit = this;
+            implicit = implicitChild;
           }
         }
       });
@@ -516,11 +523,9 @@ var htmlParser = function(html, doctype) {
     var index = tag ? current.call(depth, tag) : 0;
     var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
     if (endedTags.length > 0) {
-      endedTags.call(each, function() {
-        var tag = this;
+      endedTags.call(each, function(tag) {
         if (doctype.tags[current.name] && doctype.tags[tag.name].implicit_children) {
-          doctype.tags[tag.name].implicit_children.call(each, function() {
-            var implicit = this;
+          doctype.tags[tag.name].implicit_children.call(each, function(implicit) {
             if (tag.children.call(select, function() { return this.name+"" == implicit; }).length == 0)
               tag.children.push({ name: implicit, implicit: true, children: [], parent: tag, html: '' });
           });
@@ -593,7 +598,7 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "<title></title>\n<form action=''><fieldset><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><div><img alt src=''></div><table>\n<col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td></tbody></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title>\n<form action=''><fieldset><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
