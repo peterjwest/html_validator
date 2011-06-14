@@ -12,8 +12,8 @@ I'd also like to use the platform to create an experimental doctype for best pra
 
 #TODO
 
-- Check attributes are allowed
 - Check required attributes are present
+- Check attributes are allowed
 - Check attribute values are valid
 - Check code ignores comments/text where appropriate
 - Differentiate between cdata and whitespace
@@ -21,7 +21,6 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Get computed self valued attributes
 - Ask John Resig about weird regex
 - Log CDATA/comment sections in cdata
-- Parse comment end tag
 - Fix problem with frameset as frameset child
 - Fix array methods (map, select etc.) to call as parameter rather than in scope
 - Add a lateral stack to find mistakenly closed unary elements

@@ -272,7 +272,7 @@ var doctype = {
         return errors;
       },
       not_empty: function(doctype, doc) {
-        return (doctype.groups.tags.not_empty[this.name] && this.children.call(htmlTags).length == 0) ? [{tag: this, line: this.line}] : [];
+        return (doctype.groups.tags.not_empty[this.name] && (this.children || []).call(htmlTags).length == 0) ? [{tag: this, line: this.line}] : [];
       },
       not_opened: function(doctype, doc) {
         return (this.unopened) ? [{tag: this, line: this.line}] : [];
@@ -515,10 +515,10 @@ var htmlParser = function(html, doctype) {
       parseEndTag("", current.name);
     } 
     else if (html.indexOf("<!--") == 0) {
-      //parse end of comment
-      //add html to tag
-      current.children.push({name: "#comment", value: html.substring(4, index), html: ''});
-      html = html.substring(index + 3);
+      var end = html.indexOf("-->");
+      console.log(html.substring(end + 3));
+      current.children.push({ name: "#comment", value: html.substring(4, end), html: html.substring(0, end + 3), closed: end != -1 });
+      html = end == -1 ? "" : html.substring(end + 3);
     }
     else if (html.search(endTag) == 0) {
       match = html.match(endTag);
@@ -554,7 +554,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title>\n<form><fieldset></foo></fieldset>\n</form><div><img></img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title><!--\n<form><fieldset> <foo></html></foo></fieldset>\n</form><div><img></img></div><table>\n<col>--></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html> hajdksha";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
