@@ -175,7 +175,11 @@ var doctype = {
     var groups = this.groups;
     this.attrs.call(each, function() {
       this.call(map, function() {
+        var attr_rule = this;
         this.attrs = this.attrs.call(expandList, groups.attrs);
+        this.attrs.call(each, function(name) {
+          attr_rule.attrs[name] = attr_rule.values;
+        });
         if (this.include) this.include = this.include.call(expandList, groups.tags);
         if (this.exclude) this.exclude = this.exclude.call(expandList, groups.tags);
       });
@@ -187,7 +191,7 @@ var doctype = {
         });
       });
     });
-    var tags = this.tags = this.groups.tags.all.call(clone);
+    var tags = this.tags = groups.tags.all.call(clone);
     tags.call(each, function(name) {
       tags[name] = {};
     });
@@ -206,8 +210,21 @@ var doctype = {
         });
       });
     });
+    var attrs = this.attrs;
+    this.tags.call(each, function(name) {
+      var tag = this;
+      attrs.call(each, function(type) {
+        tag.attrs = tag.attrs || {};
+        tag.attrs[type] = tag.attrs[type] || {};
+        this.call(map, function() {
+          if ((this.include && this.include[name]) || (this.exclude && !this.exclude[name])) {
+            tag.attrs[type] = tag.attrs[type].call(merge, this.attrs);
+          }
+        });
+      });
+    });
 
-    this.groups.tags.implicit.call(each, function(name) {
+    groups.tags.implicit.call(each, function(name) {
       if (tags[name].allowed_parents) {
         tags[name].allowed_parents.call(each, function(parentName) {
           tags[parentName].implicit_children = tags[parentName].implicit_children || {};
@@ -290,7 +307,7 @@ var doctype = {
             position = 1;
             (tag.children || []).call(htmlTags).call(map, function(i) {
               if (set.innerTags[this.name] >= position) position = set.innerTags[this.name];
-              else { error = true; console.log(this.name+""); }
+              else { error = true; }
             });
             if (error) errors.push({parent: tag, children: set.innerTags, line: tag.line});
           }
