@@ -314,12 +314,14 @@ var doctype = {
         });
         return errors;
       },
-      required_attributes: function() {
-        var tag = this, errors = [];
-        (tag.attrs || []).call(map, function() {
-          
+      required_attributes: function(doctype, doc) {
+        var tag = this, errors = [], attrs;
+        attrs = [];
+        ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || []).call(each, function(name) {
+          if (!tag.attrs || !tag.attrs[name]) attrs.push(name);
         });
-        return errors;
+        if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
+        return [];
       },
       required_first_child: function(doctype, doc, sets) {
         var tag = this, errors = [], set;
@@ -409,7 +411,7 @@ var doctype = {
         return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
       },
       required_attributes: function() {
-        return "";
+        return this.tag.name.call(inTag)+" must have attributes "+this.attrs.call(englishList);
       },
       required_first_child: function() {
         return "The contents of "+this.parent.name.call(inTag)+" must start with "+this.child.call(inTag);
@@ -421,7 +423,7 @@ var doctype = {
         return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
       },
       unary: function() {
-        return this.tag.name.call(inTag)+" should not have a closing tag, it is self closing.";
+        return this.tag.name.call(inTag)+" should not have a closing tag (it is self closing)";
       },
       unique_children: function() {
         return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+", found "+this.count;
@@ -581,7 +583,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title>\n<form><fieldset class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title>\n<form><fieldset class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
