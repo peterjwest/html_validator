@@ -2,6 +2,7 @@
 //Original parser By John Resig (ejohn.org) http://ejohn.org/blog/pure-javascript-html-parser/
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
+var call = Object.prototype.call;
 Object.prototype.call = function(fn) { 
   var args = Array.prototype.slice.call(arguments); 
   args.shift(); 
@@ -296,6 +297,13 @@ var doctype = {
         });
         return errors;
       },
+      required_attributes: function() {
+        var tag = this, errors = [];
+        (tag.attrs || []).call(map, function() {
+          
+        });
+        return errors;
+      },
       required_first_child: function(doctype, doc, sets) {
         var tag = this, errors = [], set;
         sets.call(map, function() {
@@ -382,6 +390,9 @@ var doctype = {
       },
       ordered_children: function() {
         return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
+      },
+      required_attributes: function() {
+        return "";
       },
       required_first_child: function() {
         return "The contents of "+this.parent.name.call(inTag)+" must start with "+this.child.call(inTag);
@@ -516,7 +527,6 @@ var htmlParser = function(html, doctype) {
     } 
     else if (html.indexOf("<!--") == 0) {
       var end = html.indexOf("-->");
-      console.log(html.substring(end + 3));
       current.children.push({ name: "#comment", value: html.substring(4, end), html: html.substring(0, end + 3), closed: end != -1 });
       html = end == -1 ? "" : html.substring(end + 3);
     }
@@ -554,7 +564,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title><!--\n<form><fieldset> <foo></html></foo></fieldset>\n</form><div><img></img></div><table>\n<col>--></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html> hajdksha";
+var html = "<title></title>\n<form><fieldset class='foo'> <foo><!--</html><!-- :D --></foo></fieldset>\n</form><div><img></img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
@@ -563,3 +573,5 @@ console.log(doc);
 console.log(doc.call(draw));
 console.log(html);
 console.log(spec.transitional.validate(doc));
+
+Object.prototype.call = call;

@@ -12,6 +12,7 @@ I'd also like to use the platform to create an experimental doctype for best pra
 
 #TODO
 
+- Compute attributes for each element
 - Check required attributes are present
 - Check attributes are allowed
 - Check attribute values are valid
