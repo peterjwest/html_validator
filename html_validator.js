@@ -272,8 +272,10 @@ var doctype = {
         return errors;
       },
       not_empty: function(doctype, doc) {
-        if (doctype.groups.tags.not_empty[this.name] && this.children.call(htmlTags).length == 0) return [{tag: this, line: this.line}];
-        return [];
+        return (doctype.groups.tags.not_empty[this.name] && this.children.call(htmlTags).length == 0) ? [{tag: this, line: this.line}] : [];
+      },
+      not_implicit: function(doctype, doc) {
+        return (this.unopened) ? [{tag: this, line: this.line}] : [];
       },
       ordered_children: function(doctype, doc, sets) {
         var tag = this, errors = [], sets, position, error;
@@ -333,6 +335,9 @@ var doctype = {
         });
         return errors;
       },
+      unary: function(doctype, doc) {
+        return (doctype.groups.tags.unary[this.name] && this.closed) ? [{tag: this, line: this.line}] : [];
+      },
       unique_children: function(doctype, doc, sets) {
         var tag = this, errors = [], set;
         sets.call(map, function() {
@@ -366,6 +371,9 @@ var doctype = {
       not_empty: function() {
         return this.tag.name.call(inTag)+" can't be empty";
       },
+      not_implicit: function() {
+        return this.tag.name.call(inTag)+" must have an opening tag";
+      },
       ordered_children: function() {
         return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
       },
@@ -377,6 +385,9 @@ var doctype = {
       },
       required_children: function() {
         return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
+      },
+      unary: function() {
+        return this.tag.name.call(inTag)+" should not have a closing tag, it is self closing.";
       },
       unique_children: function() {
         return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+", found "+this.count;
@@ -537,7 +548,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<meta/><title> Hi!\n</title><title> Hi!\n</title>\n</head>\n<form><fieldset><legend></legend><legend></legend></fieldset></form><table>\n<col>\n<tfoot><tr><td></tfoot>\n<img>\n</tbody></table><table></table>\n</html>";
-var html = "<title></title>\n<form><fieldset><foo></fieldset>\n</form><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
+var html = "<title></title>\n<form><fieldset></foo></fieldset>\n</form><div><img></img></div><table>\n<col></col>\n<tfoot>\n<tr><td></tfoot>\n<tr><td>\n</tbody><tfoot></tfoot></table>\n<del><table></table></del>\n</body></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);

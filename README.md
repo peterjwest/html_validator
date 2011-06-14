@@ -12,8 +12,7 @@ I'd also like to use the platform to create an experimental doctype for best pra
 
 #TODO
 
-- Check unary tags are unary & visa versa
-- Check non optionally closed tags are closed properly
+- Check non optionally closed elements are closed properly
 - Check attributes are allowed
 - Check required attributes are present
 - Check attribute values are valid
@@ -26,6 +25,7 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Parse comment end tag
 - Fix problem with frameset as frameset child
 - Fix array methods (map, select etc.) to call as parameter rather than in scope
+- Add a lateral stack to find mistakenly closed unary elements
 
 #The Parser
 
