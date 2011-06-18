@@ -14,29 +14,15 @@ var each = function(fn) {
   return this;
 };
 
-/*var map = function(fn, all) {
-  if (typeof(fn) == 'string') var attrFn = function() { return this[fn]; };
-  var array = [];
-  for (var i = 0, obj; i < this.length; i++) {
-    obj = this[i] !== undefined && this[i] !== null;
-    if (obj || all) array.push((obj ? this[i] : false).call(attrFn || fn, i));
-  }
-  return array;
-};*/
-
 var map = function(fn) {
   var array = [];
-  for (var i = 0, obj; i < this.length; i++) array.push(fn.apply(this, [this[i], i].concat(Array.prototype.slice.call(arguments).slice(1))));
+  for (var i = 0, obj; i < this.length; i++) {
+    array.push(fn.apply(this, [this[i], i].concat(Array.prototype.slice.call(arguments).slice(1))));
+  }
   return array;
 };
 
 var get = function(item, key, attr) { return item[attr] };
-
-/*var select = function(fn) {
-  var array = [];
-  this.call(map, function(i) { if (this.call(fn, i)) array.push(this); })
-  return array;
-};*/
 
 var select = function(fn) {
   var array = [];
@@ -96,8 +82,12 @@ var draw = function(indent) {
   if (this.unopened) text += (indent||"")+"</"+this.name+">\n";
   else {
     text += (indent||"")+(this.implicit ? "{<"+this.name+">}" : "<"+this.name+">")+"\n";
-    if (this.children) text += this.children.call(map, function(child) { return child.call(draw, (indent||"")+"  "); }).join("");
-    if (!this.unary && !this.selfClosed) text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "{</"+this.name+">}\n");
+    if (this.children) {
+      text += this.children.call(map, function(child) { return child.call(draw, (indent||"")+"  "); }).join("");
+    }
+    if (!this.unary && !this.selfClosed) {
+      text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "{</"+this.name+">}\n");
+    }
   }
   return text;
 };
@@ -111,18 +101,26 @@ var reassemble = function() {
 };
 
 var englishList = function(separator) {
-  return this.slice(0, this.length -1).join(", ")+(this.length > 1 ? (separator || " and ") : "")+(this[this.length - 1] || "");
+  return [
+    this.slice(0, this.length -1).join(", "),
+    this.length > 1 ? (separator || " and ") : "",
+    this[this.length - 1] || ""
+  ].join("")
 };
 
+var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
 var inTag = function() { return "<"+this+">"; };
-var htmlTags = function() { return this.call(select, function(tag) { return tag.name != "#text" && tag.name != "#comment"; }); };
 var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
 var combineArrays = function(a,b) { return (a || []).concat(b || []); }
+
 var addAttributes = function(array, b) { 
   var a = this;
   array.call(map, function(item) { a[item] = b[item]; }); 
 }
-var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
+
+var htmlTags = function() { 
+  return this.call(select, function(tag) { return tag.name != "#text" && tag.name != "#comment"; }); 
+};
 
 var computedDescendents = function(doctype) {
   var allowed = {}, banned = {};
@@ -145,7 +143,13 @@ var expandList = function(groups) {
   map.call(each, function(value, name) {
     if (groups[name]) {
       delete map[name];
-      map.call(merge, groups[name].call(expandList, groups).call(each, function(item, tag, group) { group[tag] = value; }));
+      map.call(
+        merge, 
+        groups[name].call(expandList, groups).call(
+          each, 
+          function(item, tag, group) { group[tag] = value; }
+        )
+      );
     }
   });
   return map;
@@ -236,7 +240,8 @@ var doctype = {
       if (tags[name].allowed_parents) {
         tags[name].allowed_parents.call(each, function(parent, parentName) {
           tags[parentName].implicit_children = tags[parentName].implicit_children || {};
-          tags[parentName].implicit_children[(tags[parentName].exact_children || tags[parentName].ordered_children)[name]] = name;
+          var implicit_child = (tags[parentName].exact_children || tags[parentName].ordered_children)[name];
+          tags[parentName].implicit_children[implicit_child] = name;
         });
       }
     });
@@ -288,19 +293,21 @@ var doctype = {
         return errors;
       },
       exact_children: function(doctype, doc, sets) {
-        var tag = this, errors = [];
+        var tag = this, errors = [], children = (tag.children || []).call(htmlTags);
         sets.call(map, function(set) {
-          if (set.tags[tag.name])
-            if ((tag.children || []).call(htmlTags).call(select, function(child, i) { return i != set.innerTags[child.name] - 1; }).length > 0) 
+          if (set.tags[tag.name]) {
+            if (children.call(select, function(child, i) { return i != set.innerTags[child.name] - 1; }).length > 0) {
               errors.push({parent: tag, children: set.innerTags, line: tag.line});
+            }
+          }
         });
         return errors;
       },
       exclusive_children: function(doctype, doc, sets) {
-        var tag = this, errors = [];
+        var tag = this, errors = [], children = (tag.children || []).call(htmlTags);
         sets.call(map, function(set) {
           if (set.tags[tag.name])
-            if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length > 1)
+            if (children.call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length > 1)
               errors.push({parent: tag, children: set.innerTags, line: tag.line });
         });
         return errors;
@@ -507,7 +514,10 @@ var htmlParser = function(html, doctype) {
       var value = arguments[2] || arguments[3] || arguments[4] || (doctype.tags[tag].attrs.optional[name] || doctype.tags[tag].attrs.required[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
-    var element = { name: tag, implicit: !html, attrs: attrs, parent: current, unary: unary, selfClosed: !!selfClosed, children: [], html: html };
+    var element = {
+      name: tag, implicit: !html, attrs: attrs, parent: current,
+      unary: unary, selfClosed: !!selfClosed, children: [], html: html
+    };
     current.children.push(element);
     doc.all.push(element);
     if (!unary) current = element;
@@ -516,12 +526,14 @@ var htmlParser = function(html, doctype) {
   var parseEndTag = function(html, tag) {
     var index = tag ? current.call(depth, tag) : 0;
     var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
+    var has_implicit_children = doctype.tags[current.name] && doctype.tags[current.name].implicit_children;
     if (endedTags.length > 0) {
       endedTags.call(each, function(tag) {
-        if (doctype.tags[current.name] && doctype.tags[tag.name].implicit_children) {
+        if (has_implicit_children) {
           doctype.tags[tag.name].implicit_children.call(each, function(implicit) {
-            if (tag.children.call(select, function(child) { return child.name+"" == implicit; }).length == 0)
+            if (tag.children.call(select, function(child) { return child.name+"" == implicit; }).length == 0) {
               tag.children.push({ name: implicit, implicit: true, children: [], parent: tag, html: '' });
+            }
           });
         }
       });
@@ -532,7 +544,7 @@ var htmlParser = function(html, doctype) {
       }
       current = endedTag.parent;
     }
-    else if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children && doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
+    else if (has_implicit_children && doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
       parseStartTag("", tag, "", false);
       return parseEndTag(html, tag);
     }
