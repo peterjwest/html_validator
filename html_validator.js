@@ -14,7 +14,7 @@ var each = function(fn) {
   return this;
 };
 
-var map = function(fn, all) {
+/*var map = function(fn, all) {
   if (typeof(fn) == 'string') var attrFn = function() { return this[fn]; };
   var array = [];
   for (var i = 0, obj; i < this.length; i++) {
@@ -22,27 +22,30 @@ var map = function(fn, all) {
     if (obj || all) array.push((obj ? this[i] : false).call(attrFn || fn, i));
   }
   return array;
-};
+};*/
 
-var map2 = function(fn) {
-  if (typeof(fn) == 'string') var attrFn = function() { return this[fn]; };
+var map = function(fn) {
   var array = [];
-  for (var i = 0, obj; i < this.length; i++) array.push(this.call(attrFn || fn, this[i], i));
+  for (var i = 0, obj; i < this.length; i++) array.push(fn.apply(this, [this[i], i].concat(Array.prototype.slice.call(arguments).slice(1))));
   return array;
 };
 
 var get = function(key) { return function() { return this[key] }; };
 
-var select = function(fn) {
+/*var select = function(fn) {
   var array = [];
   this.call(map, function(i) { if (this.call(fn, i)) array.push(this); })
   return array;
+};*/
+
+var select = function(fn) {
+  var array = [];
+  this.call(map, function(item, i) { if (fn.apply(item, arguments)) array.push(item); })
+  return array;
 };
 
-var select2 = function(fn) {
-  var array = [];
-  this.call(map2, function(item, i) { if (this.call(fn, item, i)) array.push(item); })
-  return array;
+var method = function(obj, key, fn) {
+  return fn.apply(obj, Array.prototype.slice.call(arguments, 2));
 };
 
 var sum = function(){
@@ -79,12 +82,12 @@ var clone2 = function(obj) {
 
 var groupUnique = function() {
   var last, different;
-  return this.call(select, function() { different = last != this+""; last = this; return different; });
+  return this.call(select, function(item) { different = last != item; last = item; return different; });
 };
 
 var makeMap = function() {
   var obj = {};
-  this.call(map2, function(item, i) { obj[item] = i + 1; });
+  this.call(map, function(item, i) { obj[item] = i + 1; });
   return obj;
 };
 
@@ -93,7 +96,7 @@ var draw = function(indent) {
   if (this.unopened) text += (indent||"")+"</"+this.name+">\n";
   else {
     text += (indent||"")+(this.implicit ? "{<"+this.name+">}" : "<"+this.name+">")+"\n";
-    if (this.children) text += this.children.call(map2, function(child) { return child.call(draw, (indent||"")+"  "); }).join("");
+    if (this.children) text += this.children.call(map, function(child) { return child.call(draw, (indent||"")+"  "); }).join("");
     if (!this.unary && !this.selfClosed) text += (indent||"")+(this.closed ? "</"+this.name+">\n" : "{</"+this.name+">}\n");
   }
   return text;
@@ -102,7 +105,7 @@ var draw = function(indent) {
 var reassemble = function() {
   var html = "";
   if (this.html) html += this.html;
-  if (this.children) html += this.children.call(map2, function(child) { return child.call(reassemble); }).join("");
+  if (this.children) html += this.children.call(map, function(child) { return child.call(reassemble); }).join("");
   if (this.endHtml) html += this.endHtml;
   return html;
 };
@@ -112,18 +115,18 @@ var englishList = function(separator) {
 };
 
 var inTag = function() { return "<"+this+">"; };
-var htmlTags = function() { return this.call(select, function() { return this.name != "#text" && this.name != "#comment"; }); };
+var htmlTags = function() { return this.call(select, function(tag) { return tag.name != "#text" && tag.name != "#comment"; }); };
 var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
 var combineArrays = function(a,b) { return (a || []).concat(b || []); }
 var addAttributes = function(array, b) { 
   var a = this;
-  array.call(map2, function(item) { a[item] = b[item]; }); 
+  array.call(map, function(item) { a[item] = b[item]; }); 
 }
 var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
 
 var computedDescendents = function(doctype) {
   var allowed = {}, banned = {};
-  this.call(stack).call(map2, function(element) {
+  this.call(stack).call(map, function(element) {
     if (doctype.tags[element.name]) {
       allowed.call(merge, doctype.tags[element.name].allowed_descendents || {});
       banned.call(merge, doctype.tags[element.name].banned_descendents || {});  
@@ -166,7 +169,7 @@ var doctype = {
     });
     spec.rulesets = spec.rulesets || {};
     this.rulesets.call(each, function(rulesets, name) {
-      spec.rulesets[name] = combineArrays(rulesets.call(map, clone), spec.rulesets[name]);
+      spec.rulesets[name] = combineArrays(rulesets.call(map, method, clone), spec.rulesets[name]);
     });
     spec.call(addAttributes, ['extend','compute','validate','rules'], this);
     return spec;
@@ -182,19 +185,18 @@ var doctype = {
     });
     var groups = this.groups;
     this.attrs.call(each, function(attrs) {
-      attrs.call(map, function() {
-        var attr_rule = this;
-        this.attrs = this.attrs.call(expandList, groups.attrs);
-        this.attrs.call(each, function(attr, name) {
-          attr_rule.attrs[name] = attr_rule.values;
+      attrs.call(map, function(rule) {
+        rule.attrs = rule.attrs.call(expandList, groups.attrs);
+        rule.attrs.call(each, function(attr, name) {
+          rule.attrs[name] = rule.values;
         });
-        if (this.include) this.include = this.include.call(expandList, groups.tags);
-        if (this.exclude) this.exclude = this.exclude.call(expandList, groups.tags);
+        if (rule.include) rule.include = rule.include.call(expandList, groups.tags);
+        if (rule.exclude) rule.exclude = rule.exclude.call(expandList, groups.tags);
       });
     });
     this.rulesets.call(each, function(ruleset, name) {
-      ruleset.call(map, function() {
-        this.call(each, function(rule, type, rules) {
+      ruleset.call(map, function(rules) {
+        rules.call(each, function(rule, type, rules) {
           rules[type] = rule.call(expandList, groups.tags, true);
         });
       });
@@ -204,11 +206,10 @@ var doctype = {
       tags[name] = {};
     });
     this.rulesets.call(each, function(rules, ruleName) {
-      rules.call(map, function(i) {
-        var innerTags = this.innerTags;
-        this.tags.call(each, function(tag, name) {
+      rules.call(map, function(rule, i) {
+        rule.tags.call(each, function(tag, name) {
           tags[name][ruleName] = tags[name][ruleName] || {};
-          innerTags.call(each, function(child, childName) {
+          rule.innerTags.call(each, function(child, childName) {
             tags[name][ruleName][childName] = child;
             if (ruleName == "allowed_children" && tags[childName]) {
               tags[childName].allowed_parents = tags[childName].allowed_parents || {};
@@ -218,14 +219,14 @@ var doctype = {
         });
       });
     });
-    var attrs = this.attrs;
+    var attrGroups = this.attrs;
     this.tags.call(each, function(tag, name) {
-      attrs.call(each, function(attrs, type) {
+      attrGroups.call(each, function(attrs, type) {
         tag.attrs = tag.attrs || {};
         tag.attrs[type] = tag.attrs[type] || {};
-        attrs.call(map, function() {
-          if ((this.include && this.include[name]) || (this.exclude && !this.exclude[name])) {
-            tag.attrs[type] = tag.attrs[type].call(merge, this.attrs);
+        attrs.call(map, function(attr) {
+          if ((attr.include && attr.include[name]) || (attr.exclude && !attr.exclude[name])) {
+            tag.attrs[type] = tag.attrs[type].call(merge, attr.attrs);
           }
         });
       });
@@ -245,14 +246,14 @@ var doctype = {
     var doctype = this;
     errors = [];
     doctype.rules.rules.call(each, function(rule, name) {
-      doc.all.call(map, function() {
-        errors = errors.concat(this.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function() { 
-          this.message = this.call(doctype.rules.messages[name]);
-          return this;
+      doc.all.call(map, function(tag) {
+        errors = errors.concat(tag.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function(error) { 
+          tag.message = tag.call(doctype.rules.messages[name]);
+          return error;
         }));
       });
     });
-    return errors.sort(function(a, b) { return a.line - b.line; }).call(map, function() { return this.message+" on line "+this.line; }).join("\n");
+    return errors.sort(function(a, b) { return a.line - b.line; }).call(map, function(error) { return error.message+" on line "+error.line; }).join("\n");
   },
   
   rules: {
@@ -268,8 +269,8 @@ var doctype = {
         var tag = this, attrs = [];
         var allowed = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.optional) || {});
         var required = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {});
-        (tag.attrs || []).call(map, function() {
-          if (!allowed[this.name] && !required[this.name]) attrs.push(this.name);
+        (tag.attrs || []).call(map, function(attr) {
+          if (!allowed[attr.name] && !required[attr.name]) attrs.push(attr.name);
         });
         if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
         return [];
@@ -281,27 +282,25 @@ var doctype = {
       allowed_children: function(doctype, doc) {
         var tag = this, errors = [];
         var allowedDescendents = tag.call(computedDescendents, doctype);
-        (tag.children || []).call(htmlTags).call(map, function() {
-          if (!allowedDescendents[this.name]) errors.push({parent: tag, child: this, line: this.line});
+        (tag.children || []).call(htmlTags).call(map, function(child) {
+          if (!allowedDescendents[child.name]) errors.push({parent: tag, child: child, line: child.line});
         });
         return errors;
       },
       exact_children: function(doctype, doc, sets) {
-        var tag = this, errors = [], set;
-        sets.call(map, function() {
-          set = this;
+        var tag = this, errors = [];
+        sets.call(map, function(set) {
           if (set.tags[tag.name])
-            if ((tag.children || []).call(htmlTags).call(select, function(i) { return i != set.innerTags[this.name] - 1; }).length > 0) 
+            if ((tag.children || []).call(htmlTags).call(select, function(child, i) { return i != set.innerTags[child.name] - 1; }).length > 0) 
               errors.push({parent: tag, children: set.innerTags, line: tag.line});
         });
         return errors;
       },
       exclusive_children: function(doctype, doc, sets) {
-        var tag = this, errors = [], set;
-        sets.call(map, function() {
-          set = this;
+        var tag = this, errors = [];
+        sets.call(map, function(set) {
           if (set.tags[tag.name])
-            if ((tag.children || []).call(select, function() { return set.innerTags[this.name]; }).call(map, "name").call(makeMap).call(keys).length > 1)
+            if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length > 1)
               errors.push({parent: tag, children: set.innerTags, line: tag.line });
         });
         return errors;
@@ -316,14 +315,13 @@ var doctype = {
         return (!doctype.groups.tags.close_optional[this.name] && !doctype.groups.tags.unary[this.name] && !this.closed) ? [{tag: this, line: this.line}] : [];
       },
       ordered_children: function(doctype, doc, sets) {
-        var tag = this, errors = [], sets, position, error;
-        sets.call(map, function() { 
-          set = this;
+        var tag = this, errors = [], position, error;
+        sets.call(map, function(set) {
           if (set.tags[tag.name]) {
             error = false;
             position = 1;
-            (tag.children || []).call(htmlTags).call(map, function(i) {
-              if (set.innerTags[this.name] >= position) position = set.innerTags[this.name];
+            (tag.children || []).call(htmlTags).call(map, function(child, i) {
+              if (set.innerTags[child.name] >= position) position = set.innerTags[child.name];
               else { error = true; }
             });
             if (error) errors.push({parent: tag, children: set.innerTags, line: tag.line});
@@ -334,19 +332,18 @@ var doctype = {
       required_attributes: function(doctype, doc) {
         var tag = this, attrs = [];
         ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(required, name) {
-          if (!tag.attrs || !tag.attrs.call(map, "name").call(makeMap)[name]) { attrs.push(name); }
+          if (!tag.attrs || !tag.attrs.call(map, function(item) { return item.name; }).call(makeMap)[name]) { attrs.push(name); }
         });
         if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
         return [];
       },
       required_first_child: function(doctype, doc, sets) {
-        var tag = this, errors = [], set;
-        sets.call(map, function() {
-          set = this;
+        var tag = this, errors = [];
+        sets.call(map, function(set) {
           if (set.tags[tag.name]) {
             if ((tag.children || []).call(htmlTags).length > 0) {
-              tag.children.call(htmlTags).call(map, function(i) {
-                if (i == 0 && !set.innerTags[this.name]) 
+              tag.children.call(htmlTags).call(map, function(child, i) {
+                if (i == 0 && !set.innerTags[child.name]) 
                   errors.push({parent: tag, child: set.innerTags.call(keys)[0], line: tag.line});
               });
             }
@@ -356,24 +353,22 @@ var doctype = {
         return errors;
       },
       required_at_least_one_child: function(doctype, doc, sets) {
-        var tag = this, errors = [], set;
-        sets.call(map, function() {
-          set = this;
+        var tag = this, errors = [];
+        sets.call(map, function(set) {
           if (set.tags[tag.name])
-            if ((tag.children || []).call(select, function() { return set.innerTags[this.name]; }).call(map, "name").call(makeMap).call(keys).length < 1)
+            if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length < 1)
               errors.push({parent: tag, children: set.innerTags, line: tag.line});
         });
         return errors;
       },
       required_children: function(doctype, doc, sets) {
-        var tag = this, errors = [], set;
-        sets.call(map, function() {
-          set = this;
+        var tag = this, errors = [];
+        sets.call(map, function(set) {
           if (set.tags[tag.name]) {
             set.innerTags.call(each, function(innerTag, name) {
               var count = 0;
-              (tag.children || []).call(map, function() {
-                if (this.name == name) count++;
+              (tag.children || []).call(map, function(child) {
+                if (child.name == name) count++;
               });
               if (count < 1) errors.push({parent: tag, child: name, count: count, line: tag.line});
             });
@@ -385,14 +380,13 @@ var doctype = {
         return (doctype.groups.tags.unary[this.name] && this.closed) ? [{tag: this, line: this.line}] : [];
       },
       unique_children: function(doctype, doc, sets) {
-        var tag = this, errors = [], set;
-        sets.call(map, function() {
-          set = this;
+        var tag = this, errors = [];
+        sets.call(map, function(set) {
           if (set.tags[tag.name]) {
             set.innerTags.call(each, function(innerTag, name) {
               var count = 0;
-              (tag.children || []).call(map, function() {
-                if (this.name == name) count++;
+              (tag.children || []).call(map, function(child) {
+                if (child.name == name) count++;
               });
               if (count > 1) errors.push({parent: tag, child: name, count: count, line: tag.line});
             });
@@ -412,10 +406,10 @@ var doctype = {
         return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
       },
       exact_children: function() {
-        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(map, "name").call(map, inTag).join(", ");
+        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, method, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(map, method, function(item) { return item.name; }).call(map, method, inTag).join(", ");
       },
       exclusive_children: function() {
-        return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, inTag).call(englishList);
+        return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, method, inTag).call(englishList);
       },
       not_empty: function() {
         return this.tag.name.call(inTag)+" can't be empty";
@@ -427,7 +421,7 @@ var doctype = {
         return this.tag.name.call(inTag)+" must have a closing tag";
       },
       ordered_children: function() {
-        return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, "name").call(groupUnique).call(map, inTag).join(", ");
+        return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, method, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, method, function(tag) { return tag.name; }).call(groupUnique).call(map, method, inTag).join(", ");
       },
       required_attributes: function() {
         return this.tag.name.call(inTag)+" must have attribute"+(this.attrs.length > 1 ? "s" : "")+" "+this.attrs.call(englishList);
@@ -436,7 +430,7 @@ var doctype = {
         return "The contents of "+this.parent.name.call(inTag)+" must start with "+this.child.call(inTag);
       },
       required_at_least_one_child: function() {
-        return this.parent.name.call(inTag)+" must contain at least one of "+this.children.call(keys).call(map, inTag).call(englishList, " or ");
+        return this.parent.name.call(inTag)+" must contain at least one of "+this.children.call(keys).call(map, method, inTag).call(englishList, " or ");
       },
       required_children: function() {
         return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
@@ -458,14 +452,14 @@ var htmlParser = function(html, doctype) {
   var doc = {name: '#root', children: [], all: [], closed: true};
   doc.all.push(doc);
   var index, match, endedTag, lastHtml = html, current = doc;
-  var depth = function(tag) { return current.call(stack).call(map, "name").call(makeMap)[tag] - 1; };
+  var depth = function(tag) { return current.call(stack).call(map, function(tag) { return tag.name; }).call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); };
   var last = function() { return this[this.length - 1]; };
   
   var allowedDescendents = function() {
     var obj = {};
-    this.call(stack).call(map, function() { 
-      obj.call(merge, doctype.tags[this.name].allowed_descendents || {}); 
+    this.call(stack).call(map, function(tag) { 
+      obj.call(merge, doctype.tags[tag.name].allowed_descendents || {}); 
     });
     obj.call(merge, doctype.tags[this.name].allowed_children || {});
     return obj;
@@ -485,7 +479,7 @@ var htmlParser = function(html, doctype) {
         else if (doctype.tags[current.name].ordered_children) {
           var orderedChildren = doctype.tags[current.name].ordered_children;
           var children = current.children.call(htmlTags);
-          var invalidBeforeTags = children.call(select, function() { return orderedChildren[this] > position; }).length;
+          var invalidBeforeTags = children.call(select, function(child) { return orderedChildren[child] > position; }).length;
           if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
             implicit = implicitChild;
           }
@@ -526,7 +520,7 @@ var htmlParser = function(html, doctype) {
       endedTags.call(each, function(tag) {
         if (doctype.tags[current.name] && doctype.tags[tag.name].implicit_children) {
           doctype.tags[tag.name].implicit_children.call(each, function(implicit) {
-            if (tag.children.call(select, function() { return this.name+"" == implicit; }).length == 0)
+            if (tag.children.call(select, function(child) { return child.name+"" == implicit; }).length == 0)
               tag.children.push({ name: implicit, implicit: true, children: [], parent: tag, html: '' });
           });
         }
@@ -577,7 +571,7 @@ var htmlParser = function(html, doctype) {
     }
     else {
       var matches = [html.search(startTag), html.search(endTag), html.indexOf("<!--")];
-      index = (matches.call(select, function() { return this >= 0; }) || []).call(min);
+      index = (matches.call(select, function(match) { return match >= 0; }) || []).call(min);
       var text = index < 0 ? html : html.substring(0, index);
       current.children.push({name: '#text', value: text, html: text, unary: true});
       html = index < 0 ? "" : html.substring(index);
@@ -591,7 +585,7 @@ var htmlParser = function(html, doctype) {
   var findLines = function() {
     this.line = line; 
     if (this.html) line += this.html.call(newlines);
-    if (this.children) this.children.call(map, function() { this.call(findLines); });
+    if (this.children) this.children.call(map, function(child) { child.call(findLines); });
     if (this.endHtml) line += this.endHtml.call(newlines);
   };
   doc.call(findLines);
@@ -607,4 +601,4 @@ console.log(doc);
 console.log(doc.call(draw));
 console.log(spec.transitional.validate(doc));
 
-Object.prototype.call = call;
+//Object.prototype.call = call;
