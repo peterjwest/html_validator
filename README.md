@@ -20,7 +20,6 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Ask John Resig about weird regex
 - Log CDATA/comment sections in cdata
 - Fix problem with frameset as frameset child
-- Fix array methods (map, select etc.) to call as parameter rather than in scope
 - Add a lateral stack to find mistakenly closed unary elements
 - Appended implicit tags need to add child implicit tags
 

@@ -30,7 +30,7 @@ var map = function(fn) {
   return array;
 };
 
-var get = function(key) { return function() { return this[key] }; };
+var get = function(item, key, attr) { return item[attr] };
 
 /*var select = function(fn) {
   var array = [];
@@ -356,7 +356,7 @@ var doctype = {
         var tag = this, errors = [];
         sets.call(map, function(set) {
           if (set.tags[tag.name])
-            if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length < 1)
+            if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, get, "name").call(makeMap).call(keys).length < 1)
               errors.push({parent: tag, children: set.innerTags, line: tag.line});
         });
         return errors;
@@ -406,7 +406,7 @@ var doctype = {
         return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
       },
       exact_children: function() {
-        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, method, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(map, method, function(item) { return item.name; }).call(map, method, inTag).join(", ");
+        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, method, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(map, get, "name").call(map, method, inTag).join(", ");
       },
       exclusive_children: function() {
         return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, method, inTag).call(englishList);
@@ -421,7 +421,7 @@ var doctype = {
         return this.tag.name.call(inTag)+" must have a closing tag";
       },
       ordered_children: function() {
-        return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, method, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, method, function(tag) { return tag.name; }).call(groupUnique).call(map, method, inTag).join(", ");
+        return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, method, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, get, "name").call(groupUnique).call(map, method, inTag).join(", ");
       },
       required_attributes: function() {
         return this.tag.name.call(inTag)+" must have attribute"+(this.attrs.length > 1 ? "s" : "")+" "+this.attrs.call(englishList);
@@ -449,10 +449,10 @@ var htmlParser = function(html, doctype) {
   var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
   var endTag = /<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
-  var doc = {name: '#root', children: [], all: [], closed: true};
+  var doc = { name: '#root', children: [], all: [], closed: true };
   doc.all.push(doc);
   var index, match, endedTag, lastHtml = html, current = doc;
-  var depth = function(tag) { return current.call(stack).call(map, function(tag) { return tag.name; }).call(makeMap)[tag] - 1; };
+  var depth = function(tag) { return current.call(stack).call(map, get, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); };
   var last = function() { return this[this.length - 1]; };
   
