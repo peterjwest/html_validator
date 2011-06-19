@@ -3,11 +3,7 @@
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
 var call = Object.prototype.call;
-Object.prototype.call = function(fn) { 
-  var args = Array.prototype.slice.call(arguments); 
-  args.shift(); 
-  return fn.apply(this, args); 
-};
+Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.slice.call(arguments, 1)); };
 
 var each = function(fn) {
   for(var i in this) if (this.call(Object.hasOwnProperty, i)) this.call(fn, this[i], i, this);
@@ -23,6 +19,10 @@ var map = function(fn) {
 };
 
 var get = function(item, key, attr) { return item[attr] };
+var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
+var sum = function(){ for (var i = 0, sum = 0; i < this.length; i++) sum += this[i]; return sum; };
+var values = function() { return this.call(mapEach, function(item) { return item; }); };
+var keys = function() { return this.call(mapEach, function(item, key) { return key; }); };
 
 var select = function(fn) {
   var array = [];
@@ -30,23 +30,11 @@ var select = function(fn) {
   return array;
 };
 
-var method = function(obj, key, fn) {
-  return fn.apply(obj, Array.prototype.slice.call(arguments, 2));
-};
-
-var sum = function(){
-  for (var i = 0, sum = 0; i < this.length; i++) sum += this[i];
-  return sum;
-};
-
 var mapEach = function(fn) {
   var array = [];
   this.call(each, function(item, name) { array.push({}.call(fn, item, name)); });
   return array;
 };
-
-var values = function() { return this.call(mapEach, function(item) { return item; }); };
-var keys = function() { return this.call(mapEach, function(item, key) { return key; }); };
 
 var merge = function(b) {
   var a = this;
@@ -57,12 +45,6 @@ var merge = function(b) {
 var clone = function() {
   var obj = {};
   this.call(each, function(item, name) { obj[name] = item; });
-  return obj;
-};
-
-var clone2 = function(obj) {
-  var obj = {};
-  obj.call(each, function(item, name) { obj[name] = item; });
   return obj;
 };
 
@@ -248,12 +230,25 @@ var doctype = {
   },
   
   validate: function(doc) {
-    var doctype = this;
-    errors = [];
+    var doctype = this, errors = [], current;
+    var matchTag = /(<)([^<>]+)>/g, matchAttr = /(\[)([^\[\]]+)\]/g;
+    var insertItem = function(match, type, name, position, string) {
+      if (!current[name]) return match;
+      var list = !current[name].substr;
+      var plural = list && current[name].length > 1;
+      if (type == "<") {
+        return list ? current[name].call(map, method, inTag).join(", ") : current[name].call(inTag);
+      }
+      if (type == "[") {
+        return "attribute"+(plural ? "s" : "")+" "+(list ? current[name].join(", ") : current[name]);
+      }
+    };
     doctype.rules.rules.call(each, function(rule, name) {
       doc.all.call(map, function(tag) {
         errors = errors.concat(tag.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function(error) { 
-          tag.message = tag.call(doctype.rules.messages[name]);
+          current = error;
+          console.log(name);
+          error.message = doctype.rules.messages[name].replace(matchTag, insertItem).replace(matchAttr, insertItem);
           return error;
         }));
       });
@@ -277,18 +272,18 @@ var doctype = {
         (tag.attrs || []).call(map, function(attr) {
           if (!allowed[attr.name] && !required[attr.name]) attrs.push(attr.name);
         });
-        if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
+        if (attrs.length > 0) return [{tag: tag.name, attrs: attrs, line: tag.line}];
         return [];
       },
       allowed_tags: function(doctype, doc) {
         if (doctype.groups.tags.all[this.name] || doctype.groups.tags.pseudo[this.name]) return [];
-        return [this];
+        return [{ tag: this.name, line: this.line }];
       },
       allowed_children: function(doctype, doc) {
         var tag = this, errors = [];
         var allowedDescendents = tag.call(computedDescendents, doctype);
         (tag.children || []).call(htmlTags).call(map, function(child) {
-          if (!allowedDescendents[child.name]) errors.push({parent: tag, child: child, line: child.line});
+          if (!allowedDescendents[child.name]) errors.push({parent: tag.name, child: child.name, line: child.line});
         });
         return errors;
       },
@@ -297,7 +292,11 @@ var doctype = {
         sets.call(map, function(set) {
           if (set.tags[tag.name]) {
             if (children.call(select, function(child, i) { return i != set.innerTags[child.name] - 1; }).length > 0) {
-              errors.push({parent: tag, children: set.innerTags, line: tag.line});
+              errors.push({
+                parent: tag.name, line: tag.line,
+                required: set.innerTags.call(keys), 
+                children: tag.children.call(map, get, "name"), 
+              });
             }
           }
         });
@@ -308,18 +307,18 @@ var doctype = {
         sets.call(map, function(set) {
           if (set.tags[tag.name])
             if (children.call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length > 1)
-              errors.push({parent: tag, children: set.innerTags, line: tag.line });
+              errors.push({parent: tag.name, children: set.innerTags.call(map, get, "name"), line: tag.line });
         });
         return errors;
       },
       not_empty: function(doctype, doc) {
-        return (doctype.groups.tags.not_empty[this.name] && (this.children || []).call(htmlTags).length == 0) ? [{tag: this, line: this.line}] : [];
+        return (doctype.groups.tags.not_empty[this.name] && (this.children || []).call(htmlTags).length == 0) ? [{tag: this.name, line: this.line}] : [];
       },
       not_opened: function(doctype, doc) {
-        return (this.unopened) ? [{tag: this, line: this.line}] : [];
+        return (this.unopened) ? [{tag: this.name, line: this.line}] : [];
       },
       not_optionally_closed: function(doctype, doc) {
-        return (!doctype.groups.tags.close_optional[this.name] && !doctype.groups.tags.unary[this.name] && !this.closed) ? [{tag: this, line: this.line}] : [];
+        return (!doctype.groups.tags.close_optional[this.name] && !doctype.groups.tags.unary[this.name] && !this.closed) ? [{tag: this.name, line: this.line}] : [];
       },
       ordered_children: function(doctype, doc, sets) {
         var tag = this, errors = [], position, error;
@@ -331,7 +330,12 @@ var doctype = {
               if (set.innerTags[child.name] >= position) position = set.innerTags[child.name];
               else { error = true; }
             });
-            if (error) errors.push({parent: tag, children: set.innerTags, line: tag.line});
+            if (error) errors.push({
+              tag: tag.name, 
+              required: set.innerTags.call(keys), 
+              children: tag.children.call(map, get, "name").call(groupUnique), 
+              line: tag.line
+            });
           }
         });
         return errors;
@@ -341,7 +345,7 @@ var doctype = {
         ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(required, name) {
           if (!tag.attrs || !tag.attrs.call(map, function(item) { return item.name; }).call(makeMap)[name]) { attrs.push(name); }
         });
-        if (attrs.length > 0) return [{tag: tag, attrs: attrs, line: tag.line}];
+        if (attrs.length > 0) return [{tag: tag.name, attrs: attrs.call(values), line: tag.line}];
         return [];
       },
       required_first_child: function(doctype, doc, sets) {
@@ -351,10 +355,10 @@ var doctype = {
             if ((tag.children || []).call(htmlTags).length > 0) {
               tag.children.call(htmlTags).call(map, function(child, i) {
                 if (i == 0 && !set.innerTags[child.name]) 
-                  errors.push({parent: tag, child: set.innerTags.call(keys)[0], line: tag.line});
+                  errors.push({tag: tag.name, child: set.innerTags.call(keys)[0], line: tag.line});
               });
             }
-            else errors.push({parent: tag, child: set.innerTags.call(keys)[0], line: tag.line});
+            else errors.push({tag: tag.name, child: set.innerTags.call(keys)[0], line: tag.line});
           } 
         });
         return errors;
@@ -377,14 +381,14 @@ var doctype = {
               (tag.children || []).call(map, function(child) {
                 if (child.name == name) count++;
               });
-              if (count < 1) errors.push({parent: tag, child: name, count: count, line: tag.line});
+              if (count < 1) errors.push({parent: tag.name, child: name, count: count, line: tag.line});
             });
           }
         });
         return errors;
       },
       unary: function(doctype, doc) {
-        return (doctype.groups.tags.unary[this.name] && this.closed) ? [{tag: this, line: this.line}] : [];
+        return (doctype.groups.tags.unary[this.name] && this.closed) ? [{tag: this.name, line: this.line}] : [];
       },
       unique_children: function(doctype, doc, sets) {
         var tag = this, errors = [];
@@ -395,7 +399,7 @@ var doctype = {
               (tag.children || []).call(map, function(child) {
                 if (child.name == name) count++;
               });
-              if (count > 1) errors.push({parent: tag, child: name, count: count, line: tag.line});
+              if (count > 1) errors.push({parent: tag.name, child: name, count: count, line: tag.line});
             });
           }
         });
@@ -403,51 +407,21 @@ var doctype = {
       }
     },
     messages: {
-      allowed_attributes: function() {
-        return this.tag.name.call(inTag)+" can't have attribute"+(this.attrs.length > 1 ? "s" : "")+" "+this.attrs.call(englishList, " or ");
-      },
-      allowed_tags: function() {
-        return this.name.call(inTag)+" is not a valid element";
-      },
-      allowed_children: function() {
-        return this.parent.name.call(inTag)+" can't contain "+this.child.name.call(inTag);
-      },
-      exact_children: function() {
-        return this.parent.name.call(inTag)+" must contain exactly "+this.children.call(keys).call(map, method, inTag).join(", ")+" but currently contains "+(this.parent.children || []).call(map, get, "name").call(map, method, inTag).join(", ");
-      },
-      exclusive_children: function() {
-        return this.parent.name.call(inTag)+" can't contain both "+this.children.call(keys).call(map, method, inTag).call(englishList);
-      },
-      not_empty: function() {
-        return this.tag.name.call(inTag)+" can't be empty";
-      },
-      not_opened: function() {
-        return this.tag.name.call(inTag)+" must have an opening tag";
-      },
-      not_optionally_closed: function() {
-        return this.tag.name.call(inTag)+" must have a closing tag";
-      },
-      ordered_children: function() {
-        return "The contents of "+this.parent.name.call(inTag)+" must be ordered "+this.children.call(keys).call(map, method, inTag).join(", ")+" but are currently ordered "+(this.parent.children.call(htmlTags) || []).call(map, get, "name").call(groupUnique).call(map, method, inTag).join(", ");
-      },
-      required_attributes: function() {
-        return this.tag.name.call(inTag)+" must have attribute"+(this.attrs.length > 1 ? "s" : "")+" "+this.attrs.call(englishList);
-      },
-      required_first_child: function() {
-        return "The contents of "+this.parent.name.call(inTag)+" must start with "+this.child.call(inTag);
-      },
-      required_at_least_one_child: function() {
-        return this.parent.name.call(inTag)+" must contain at least one of "+this.children.call(keys).call(map, method, inTag).call(englishList, " or ");
-      },
-      required_children: function() {
-        return this.parent.name.call(inTag)+" must contain "+this.child.call(inTag);
-      },
-      unary: function() {
-        return this.tag.name.call(inTag)+" should not have a closing tag (it is self closing)";
-      },
-      unique_children: function() {
-        return this.parent.name.call(inTag)+" can't contain more than one "+this.child.call(inTag)+", found "+this.count;
-      }
+      allowed_attributes: "<tag> can't have [attrs]",
+      allowed_tags: "<tag> isn't a valid tag",
+      allowed_children: "<parent> can't contain <child>", //make this collect all invalid children
+      exact_children: "<parent> must contain exactly <required> but currently contains <children>",
+      exclusive_children: "<parent> can't contain both <children>",
+      not_empty: "<tag> can't be empty",
+      not_opened: "<tag> must have an opening tag",
+      not_optionally_closed: "<tag> must have a closing tag",
+      ordered_children: "The contents of <tag> must be ordered <required> but are currently ordered <children>",
+      required_attributes: "<tag> must contain <attrs>",
+      required_first_child: "The contents of <tag> must start with <child>",
+      required_at_least_one_child: "<tag> must contain at least one of <children>",
+      required_children: "<parent> must contain <children>",
+      unary: "<tag> must not have a closing tag",
+      unique_children: "<parent> can't contain more than one <child>" //add count
     }
   }
 };
@@ -604,7 +578,7 @@ var htmlParser = function(html, doctype) {
   return doc;
 };
 
-var html = "<title></title>\n<form action=''><fieldset><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body></html>";
+var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
