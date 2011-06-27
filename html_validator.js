@@ -256,12 +256,21 @@ var doctype = {
   },
   
   rules: {
-    attributes: {
-      number: /^\s*[0-9]+\s*$/,
-      length: /^\s*[0-9]+%?\s*/,
-      multi_length: /^\s*[0-9]+[%*]?\s*/,
-      name: /^\s*[a-z][a-z0-9-_:.]*\s*$/i,
-      names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
+    attribute_values: {
+      format: {
+        number: /^\s*[0-9]+\s*$/,
+        length: /^\s*[0-9]+%?\s*/,
+        multi_length: /^\s*[0-9]+[%*]?\s*/,
+        name: /^\s*[a-z][a-z0-9-_:.]*\s*$/i,
+        names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
+      },
+      messages: {
+        number: "a number",
+        length: "a number or percentage",
+        multi_length: "a number, percentage or relative length (e.g. 3*)",
+        name: "an alphanumeric name which starts with a letter and can contain only these symbols: '-', '_', ':', '.'",
+        names: "a whitespace separated list of alphanumeric names which starts with a letter and can contain only these symbols: '-', '_', ':', '.'"
+      }
     },
     rules: {
       allowed_attributes: function(doctype, doc) {
@@ -272,6 +281,14 @@ var doctype = {
           if (!allowed[attr.name] && !required[attr.name]) attrs.push(attr.name);
         });
         if (attrs.length > 0) return [{tag: tag.name, attrs: attrs, line: tag.line}];
+        return [];
+      },
+      allowed_attribute_values: function(doctype, doc) {
+        (this.attrs || []).call(map, function(attr) {
+          if (!attr.value.match);
+          //get element value type from doctype
+          //get value type format from doctype
+        });
         return [];
       },
       allowed_tags: function(doctype, doc) {
@@ -408,6 +425,7 @@ var doctype = {
     },
     messages: {
       allowed_attributes: "<tag> can't have [attrs]",
+      allowed_attribute_values: "<tag> attribute [attr] must be [format]",
       allowed_tags: "<tag> isn't a valid tag",
       allowed_children: "<parent> can't contain <child>", //make this collect all invalid children
       exact_children: "<parent> must contain exactly <required> but currently contains <children>",
@@ -589,7 +607,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
-var html = "";
+var html = "<html foo='bar>\"'>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
