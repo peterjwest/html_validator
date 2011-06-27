@@ -247,7 +247,6 @@ var doctype = {
       doc.all.call(map, function(tag) {
         errors = errors.concat(tag.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function(error) { 
           current = error;
-          console.log(name);
           error.message = doctype.rules.messages[name].replace(matchTag, insertItem).replace(matchAttr, insertItem);
           return error;
         }));
@@ -277,6 +276,7 @@ var doctype = {
       },
       allowed_tags: function(doctype, doc) {
         if (doctype.groups.tags.all[this.name] || doctype.groups.tags.pseudo[this.name]) return [];
+        console.log(this);
         return [{ tag: this.name, line: this.line }];
       },
       allowed_children: function(doctype, doc) {
@@ -358,7 +358,7 @@ var doctype = {
                   errors.push({tag: tag.name, child: set.innerTags.call(keys)[0], line: tag.line});
               });
             }
-            else errors.push({tag: tag.name, child: set.innerTags.call(keys)[0], line: tag.line});
+            else errors.push({tag: tag.name, c: set.innerTags.call(keys)[0], line: tag.line});
           } 
         });
         return errors;
@@ -419,7 +419,7 @@ var doctype = {
       required_attributes: "<tag> must contain <attrs>",
       required_first_child: "The contents of <tag> must start with <child>",
       required_at_least_one_child: "<tag> must contain at least one of <children>",
-      required_children: "<parent> must contain <children>",
+      required_children: "<parent> must contain <child>",
       unary: "<tag> must not have a closing tag",
       unique_children: "<parent> can't contain more than one <child>" //add count
     }
@@ -437,7 +437,8 @@ var htmlParser = function(html, doctype) {
   var min = function() { return Math.min.apply({}, this); };
   var last = function() { return this[this.length - 1]; };
   
-  var allowedDescendents = function() {
+  //Computes allowed children based on allowed_children and allowed_descendents rules
+  var allowedChildren = function() {
     var obj = {};
     this.call(stack).call(map, function(tag) { 
       obj.call(merge, doctype.tags[tag.name].allowed_descendents || {}); 
@@ -476,7 +477,7 @@ var htmlParser = function(html, doctype) {
     }
     
     if (doctype.groups.tags.close_optional[current.name]) {
-      if (!current.call(allowedDescendents)[tag] && !doctype.groups.tags.last_child[current.name]) {
+      if (!current.call(allowedChildren)[tag] && !doctype.groups.tags.last_child[current.name]) {
         parseEndTag("", current.name);
         return parseStartTag(html, tag, rest, selfClosed);
       }
@@ -500,16 +501,25 @@ var htmlParser = function(html, doctype) {
   var parseEndTag = function(html, tag) {
     var index = tag ? current.call(depth, tag) : 0;
     var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
-    var has_implicit_children = doctype.tags[current.name] && doctype.tags[current.name].implicit_children;
     if (endedTags.length > 0) {
       endedTags.call(each, function(tag) {
-        if (has_implicit_children) {
-          doctype.tags[tag.name].implicit_children.call(each, function(implicit) {
-            if (tag.children.call(select, function(child) { return child.name+"" == implicit; }).length == 0) {
-              tag.children.push({ name: implicit, implicit: true, children: [], parent: tag, html: '' });
-            }
-          });
+        var start = current;
+        while (current !== start.parent) {
+          if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
+            var element = false;
+            doctype.tags[current.name].implicit_children.call(each, function(implicit) {
+              if (!element && current.children.call(select, function(child) { return child.name+"" == implicit; }).length == 0) {
+                element = { name: implicit, implicit: true, children: [], parent: current, html: '' };
+                current.children.push(element);
+                doc.all.push(element);
+                current = element;
+              }
+            });
+            if (!element) current = current.parent;
+          }
+          else current = current.parent;
         }
+        current = start;
       });
       var endedTag = endedTags[0];
       if (html) { 
@@ -579,6 +589,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
+var html = "";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);

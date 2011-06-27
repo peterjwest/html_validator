@@ -21,7 +21,6 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Log CDATA/comment sections in cdata
 - Fix problem with frameset as frameset child
 - Add a lateral stack to find mistakenly closed unary elements
-- Appended implicit tags need to add child implicit tags
 
 #The Parser
 
