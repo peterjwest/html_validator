@@ -455,7 +455,7 @@ var htmlParser = function(html, doctype) {
   var min = function() { return Math.min.apply({}, this); };
   var last = function() { return this[this.length - 1]; };
   
-  //Computes allowed children based on allowed_children and allowed_descendents rules
+  //Computes allowed child elements based on allowed_children and allowed_descendents rules
   var allowedChildren = function() {
     var obj = {};
     this.call(stack).call(map, function(tag) { 
@@ -467,15 +467,18 @@ var htmlParser = function(html, doctype) {
   
   var parseStartTag = function(html, tag, rest, selfClosed) {
     var prev = current.children.call(htmlTags).call(last);
+    //Checks for implicit child elements
     if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
       var implicit = false;
       doctype.tags[current.name].implicit_children.call(each, function(implicitChild, position) {
         if (implicit) return;
+        //Looks for an implied child element with an exact position
         if (doctype.tags[current.name].exact_children) {
           if (implicitChild != tag && current.children.call(htmlTags).length + 1 == position) {
             implicit = implicitChild;
           }
         }
+        //Looks for an implied child element within a specific order
         else if (doctype.tags[current.name].ordered_children) {
           var orderedChildren = doctype.tags[current.name].ordered_children;
           var children = current.children.call(htmlTags);
@@ -485,6 +488,7 @@ var htmlParser = function(html, doctype) {
           }
         }
       });
+      //Adds the implied element if one has been found, restarts the parseStartTag process for this element
       if (implicit && (!prev || prev.name+"" != implicit || !prev.implicit)) {
         var element = {name: implicit, implicit: true, attrs: [], parent: current, unary: false, children: [], html: ''};
         current.children.push(element);
@@ -494,6 +498,8 @@ var htmlParser = function(html, doctype) {
       }
     }
     
+    //Closes the current element if it is optionally closed and the new tag doesn't belong inside it,
+    //restarts the parseStartTag process for this element
     if (doctype.groups.tags.close_optional[current.name]) {
       if (!current.call(allowedChildren)[tag] && !doctype.groups.tags.last_child[current.name]) {
         parseEndTag("", current.name);
@@ -503,8 +509,11 @@ var htmlParser = function(html, doctype) {
 
     var unary = doctype.groups.tags.unary[tag] || !!selfClosed;
     var attrs = [];
+    var value = "";
+    //Parse attributes and their values
+    var allowedAttrs = doctype.tags[tag].attrs.optional.call(merge, doctype.tags[tag].attrs.required);
     rest.replace(attr, function(match, name) {
-      var value = arguments[2] || arguments[3] || arguments[4] || (doctype.tags[tag].attrs.optional[name] || doctype.tags[tag].attrs.required[name] ? name : "");
+      value = arguments[2] || arguments[3] || arguments[4] || (allowedAttrs[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
     var element = {
@@ -519,14 +528,16 @@ var htmlParser = function(html, doctype) {
   var parseEndTag = function(html, tag) {
     var index = tag ? current.call(depth, tag) : 0;
     var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
+    //Deals with a number of existing elements being closed
     if (endedTags.length > 0) {
       endedTags.call(each, function(tag) {
         var start = current;
+        //Checks for implicit elements which have not been added because they don't have any content
         while (current !== start.parent) {
           if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
             var element = false;
             doctype.tags[current.name].implicit_children.call(each, function(implicit) {
-              if (!element && current.children.call(select, function(child) { return child.name+"" == implicit; }).length == 0) {
+              if (!element && current.children.call(select, function(c) { return c.name+"" == implicit; }).length == 0) {
                 element = { name: implicit, implicit: true, children: [], parent: current, html: '' };
                 current.children.push(element);
                 doc.all.push(element);
@@ -546,11 +557,8 @@ var htmlParser = function(html, doctype) {
       }
       current = endedTag.parent;
     }
-    else if (has_implicit_children && doctype.tags[current.name].implicit_children.call(values).call(makeMap)[tag]) {
-      parseStartTag("", tag, "", false);
-      return parseEndTag(html, tag);
-    }
-    else { 
+    //Deals with an non-opened element being closed
+    else {
       var element = {name: tag, unopened: true, closed: true, endHtml: html};
       current.children.push(element);
       doc.all.push(element);

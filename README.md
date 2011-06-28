@@ -18,9 +18,11 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Differentiate between cdata and whitespace
 - Check XHTML closing tags / not self closing
 - Ask John Resig about weird regex
+- Investigate escaped attribute value regex
 - Log CDATA/comment sections in cdata
 - Fix problem with frameset as frameset child
 - Add a lateral stack to find mistakenly closed unary elements
+- Rename tag to element where appropriate
 
 #The Parser
 
