@@ -498,7 +498,7 @@ var htmlParser = function(html, doctype) {
       }
     }
     
-    //Closes the current element if it is optionally closed and the new tag doesn't belong inside it,
+    //Closes the current element if it is optionally closed and the new element doesn't belong inside it,
     //restarts the parseStartTag process for this element
     if (doctype.groups.tags.close_optional[current.name]) {
       if (!current.call(allowedChildren)[tag] && !doctype.groups.tags.last_child[current.name]) {
@@ -557,7 +557,7 @@ var htmlParser = function(html, doctype) {
       }
       current = endedTag.parent;
     }
-    //Deals with an non-opened element being closed
+    //Deals with an unopened element being closed
     else {
       var element = {name: tag, unopened: true, closed: true, endHtml: html};
       current.children.push(element);
@@ -567,7 +567,7 @@ var htmlParser = function(html, doctype) {
  
   while (html) {
     if (current && doctype.groups.tags.cdata_elements[current.name]) {
-      //removed "[^>]*" from regex end, need to check
+      //removed "[^>]*" from regex end, need to check with John Resig
       html = html.replace(new RegExp("(.*)<\/"+current.name+">"), function(all, text) {
         //need more robust solution, and logging of whether cdata tag is used
         text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
