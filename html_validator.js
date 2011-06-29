@@ -211,11 +211,12 @@ var doctype = {
         tag.attrs = tag.attrs || {};
         tag.attrs[type] = tag.attrs[type] || {};
         attrs.call(map, function(attr) {
-          if ((attr.include && attr.include[name]) || (attr.exclude && !attr.exclude[name])) {
+          if ((attr.include && attr.include[name]) || (attr.exclude && !attr.exclude[name])) {           
             tag.attrs[type] = tag.attrs[type].call(merge, attr.attrs);
           }
         });
       });
+      tag.attrs["all"] = tag.attrs["optional"].call(merge, tag.attrs["required"]);
     });
 
     groups.tags.implicit.call(each, function(tag, name) {
@@ -234,7 +235,7 @@ var doctype = {
     var matchTag = /(<)([^<>]+)>/g, matchAttr = /(\[)([^\[\]]+)\]/g;
     var insertItem = function(match, type, name, position, string) {
       if (!current[name]) return match;
-      var list = !current[name].substr;
+      var list = current[name].join;
       var plural = list && current[name].length > 1;
       if (type == "<") {
         return list ? current[name].call(map, method, inTag).join(", ") : current[name].call(inTag);
@@ -257,7 +258,8 @@ var doctype = {
   
   rules: {
     attribute_values: {
-      format: {
+      formats: {
+        cdata: /^[\s\S]*$/,
         number: /^\s*[0-9]+\s*$/,
         length: /^\s*[0-9]+%?\s*/,
         multi_length: /^\s*[0-9]+[%*]?\s*/,
@@ -268,28 +270,31 @@ var doctype = {
         number: "a number",
         length: "a number or percentage",
         multi_length: "a number, percentage or relative length (e.g. 3*)",
-        name: "an alphanumeric name which starts with a letter and can contain only these symbols: '-', '_', ':', '.'",
-        names: "a whitespace separated list of alphanumeric names which starts with a letter and can contain only these symbols: '-', '_', ':', '.'"
+        name: "an alphanumeric name which starts with a letter and can contain only these symbols: '-_:.'",
+        names: "a whitespace separated list of alphanumeric names which starts with a letter and can contain only these symbols: '-_:.'"
       }
     },
     rules: {
       allowed_attributes: function(doctype, doc) {
         var tag = this, attrs = [];
-        var allowed = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.optional) || {});
-        var required = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {});
+        var all = ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.all) || {});
         (tag.attrs || []).call(map, function(attr) {
-          if (!allowed[attr.name] && !required[attr.name]) attrs.push(attr.name);
+          if (!all[attr.name]) attrs.push(attr.name);
         });
         if (attrs.length > 0) return [{tag: tag.name, attrs: attrs, line: tag.line}];
         return [];
       },
       allowed_attribute_values: function(doctype, doc) {
+        var tag = this, errors = [];
         (this.attrs || []).call(map, function(attr) {
-          if (!attr.value.match);
-          //get element value type from doctype
-          //get value type format from doctype
+          if (!doctype.tags[tag.name]) return;
+          var format = (doctype.tags[tag.name].attrs.all[attr.name] || "").replace("#", ""); 
+          var message = doctype.rules.attribute_values.messages[format];
+          format = doctype.rules.attribute_values.formats[format] || format;
+          if (!format || !(attr.value || "").match(format)) 
+            errors.push({tag: tag.name, attr: attr.name, format: message, line: tag.line});
         });
-        return [];
+        return errors;
       },
       allowed_tags: function(doctype, doc) {
         if (doctype.groups.tags.all[this.name] || doctype.groups.tags.pseudo[this.name]) return [];
@@ -425,7 +430,7 @@ var doctype = {
     },
     messages: {
       allowed_attributes: "<tag> can't have [attrs]",
-      allowed_attribute_values: "<tag> attribute [attr] must be [format]",
+      allowed_attribute_values: "<tag> [attr] must be [format]",
       allowed_tags: "<tag> isn't a valid tag",
       allowed_children: "<parent> can't contain <child>", //make this collect all invalid children
       exact_children: "<parent> must contain exactly <required> but currently contains <children>",
@@ -511,9 +516,8 @@ var htmlParser = function(html, doctype) {
     var attrs = [];
     var value = "";
     //Parse attributes and their values
-    var allowedAttrs = doctype.tags[tag].attrs.optional.call(merge, doctype.tags[tag].attrs.required);
     rest.replace(attr, function(match, name) {
-      value = arguments[2] || arguments[3] || arguments[4] || (allowedAttrs[name] ? name : "");
+      value = arguments[2] || arguments[3] || arguments[4] || (doctype.tags[tag].attrs.all[name] ? name : "");
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
     var element = {
@@ -615,7 +619,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
-var html = "<html foo='bar>\"'>";
+var html = "<html style='bar>\"' id='a_b' class disabled=\"asdsa\">";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);

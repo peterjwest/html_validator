@@ -1,4 +1,4 @@
-#An HTML Validator in Javascript (Insert catchy name here)
+# An HTML Validator in Javascript (Insert catchy name here)
 
 Are you fed up of using slow, server side validators with obscure error messages?
 Maybe you aren't, but as a Chrome developer I am, because there is no decent HTML validation solution.
@@ -10,7 +10,7 @@ The aim of this project is this:
 
 I'd also like to use the platform to create an experimental doctype for best practice HTML, which would evolve with the web.
 
-#TODO
+# TODO
 
 - Add doctype detection
 - Check attribute values are valid
@@ -24,7 +24,7 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Add a lateral stack to find mistakenly closed unary elements
 - Rename tag to element where appropriate
 
-#The Parser
+# The Parser
 
 Here I'll explain how the parser works, some of the intricacies of HTML, and how they are handled by the parser.
 
