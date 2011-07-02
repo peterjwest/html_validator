@@ -267,6 +267,7 @@ var doctype = {
         names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
       },
       messages: {
+        cdata: "anything",
         number: "a number",
         length: "a number or percentage",
         multi_length: "a number, percentage or relative length (e.g. 3*)",
@@ -288,11 +289,22 @@ var doctype = {
         var tag = this, errors = [];
         (this.attrs || []).call(map, function(attr) {
           if (!doctype.tags[tag.name]) return;
-          var format = (doctype.tags[tag.name].attrs.all[attr.name] || "").replace("#", ""); 
-          var message = doctype.rules.attribute_values.messages[format];
-          format = doctype.rules.attribute_values.formats[format] || format;
-          if (!format || !(attr.value || "").match(format)) 
+          var values = (doctype.tags[tag.name].attrs.all[attr.name] || "");
+          if (values.match("#")) {
+            console.log(values);
+            var formatName = values.replace("#", "");
+            var format = doctype.rules.attribute_values.formats[formatName];
+            var message = doctype.rules.attribute_values.messages[formatName];
+          }
+          else if (values.match(/\S/)) {  
+            values = values.split(",");
+            var format = new RegExp("^("+values.join("|")+")$");
+            var message = (values.length > 1 ? "one of " : "")+values.call(englishList, " or ");
+          }
+          if (format && !(attr.value || "").match(format)) {
             errors.push({tag: tag.name, attr: attr.name, format: message, line: tag.line});
+            alert(format, message);
+          }
         });
         return errors;
       },
@@ -430,7 +442,7 @@ var doctype = {
     },
     messages: {
       allowed_attributes: "<tag> can't have [attrs]",
-      allowed_attribute_values: "<tag> [attr] must be [format]",
+      allowed_attribute_values: "<tag> [test] [attr] must be [format]",
       allowed_tags: "<tag> isn't a valid tag",
       allowed_children: "<parent> can't contain <child>", //make this collect all invalid children
       exact_children: "<parent> must contain exactly <required> but currently contains <children>",
@@ -619,7 +631,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
-var html = "<html style='bar>\"' id='a_b' class disabled=\"asdsa\">";
+var html = "<html style='bar>\"' id='1a_b' class disabled=\"asdsa\">";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);

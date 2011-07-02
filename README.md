@@ -13,7 +13,8 @@ I'd also like to use the platform to create an experimental doctype for best pra
 # TODO
 
 - Add doctype detection
-- Check attribute values are valid
+- Compute self values attributes in validation
+- Rework error messaage templating
 - Check code ignores comments/text where appropriate
 - Differentiate between cdata and whitespace
 - Check XHTML closing tags / not self closing
