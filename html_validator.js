@@ -232,16 +232,16 @@ var doctype = {
   
   validate: function(doc) {
     var doctype = this, errors = [], current;
-    var matchTag = /(<)([^<>]+)>/g, matchAttr = /(\[)([^\[\]]+)\]/g;
-    var insertItem = function(match, type, name, position, string) {
+    var matchTag = /(<)(([^<>\s]+)[^<>]*)>/g, matchAttr = /(\[)(([^\[\]\s]+)[^\[\]]*)\]/g;
+    var insertItem = function(match, type, options, name, position, string) {
       if (!current[name]) return match;
       var list = current[name].join;
-      var plural = list && current[name].length > 1;
+      var separator = (options.match(/\s+\S+\s+/) || [" and "])[0];
       if (type == "<") {
-        return list ? current[name].call(map, method, inTag).join(", ") : current[name].call(inTag);
+        return list ? current[name].call(map, method, inTag).call(englishList, separator) : current[name].call(inTag);
       }
       if (type == "[") {
-        return "attribute"+(plural ? "s" : "")+" "+(list ? current[name].join(", ") : current[name]);
+        return list ? current[name].call(englishList, separator) : current[name];
       }
     };
     doctype.rules.rules.call(each, function(rule, name) {
@@ -282,7 +282,7 @@ var doctype = {
         (tag.attrs || []).call(map, function(attr) {
           if (!all[attr.name]) attrs.push(attr.name);
         });
-        if (attrs.length > 0) return [{tag: tag.name, attrs: attrs, line: tag.line}];
+        if (attrs.length > 0) return [{tag: tag.name, attr: attrs, s: attrs.length > 1 ? "s" : "", line: tag.line}];
         return [];
       },
       allowed_attribute_values: function(doctype, doc) {
@@ -291,7 +291,6 @@ var doctype = {
           if (!doctype.tags[tag.name]) return;
           var values = (doctype.tags[tag.name].attrs.all[attr.name] || "");
           if (values.match("#")) {
-            console.log(values);
             var formatName = values.replace("#", "");
             var format = doctype.rules.attribute_values.formats[formatName];
             var message = doctype.rules.attribute_values.messages[formatName];
@@ -303,14 +302,12 @@ var doctype = {
           }
           if (format && !(attr.value || "").match(format)) {
             errors.push({tag: tag.name, attr: attr.name, format: message, line: tag.line});
-            alert(format, message);
           }
         });
         return errors;
       },
       allowed_tags: function(doctype, doc) {
         if (doctype.groups.tags.all[this.name] || doctype.groups.tags.pseudo[this.name]) return [];
-        console.log(this);
         return [{ tag: this.name, line: this.line }];
       },
       allowed_children: function(doctype, doc) {
@@ -329,7 +326,7 @@ var doctype = {
               errors.push({
                 parent: tag.name, line: tag.line,
                 required: set.innerTags.call(keys), 
-                children: tag.children.call(map, get, "name"), 
+                child: tag.children.call(map, get, "name"), 
               });
             }
           }
@@ -341,7 +338,7 @@ var doctype = {
         sets.call(map, function(set) {
           if (set.tags[tag.name])
             if (children.call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length > 1)
-              errors.push({parent: tag.name, children: set.innerTags.call(map, get, "name"), line: tag.line });
+              errors.push({parent: tag.name, child: set.innerTags.call(map, get, "name"), line: tag.line });
         });
         return errors;
       },
@@ -366,8 +363,8 @@ var doctype = {
             });
             if (error) errors.push({
               tag: tag.name, 
-              required: set.innerTags.call(keys), 
-              children: tag.children.call(map, get, "name").call(groupUnique), 
+              ordered: set.innerTags.call(keys), 
+              child: tag.children.call(map, get, "name").call(groupUnique), 
               line: tag.line
             });
           }
@@ -379,7 +376,12 @@ var doctype = {
         ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(required, name) {
           if (!tag.attrs || !tag.attrs.call(map, function(item) { return item.name; }).call(makeMap)[name]) { attrs.push(name); }
         });
-        if (attrs.length > 0) return [{tag: tag.name, attrs: attrs.call(values), line: tag.line}];
+        if (attrs.length > 0) return [{
+          tag: tag.name, 
+          attr: attrs.call(values), 
+          s: attrs.call(values).length > 1 ? "s" : "",
+          line: tag.line
+        }];
         return [];
       },
       required_first_child: function(doctype, doc, sets) {
@@ -392,7 +394,7 @@ var doctype = {
                   errors.push({tag: tag.name, child: set.innerTags.call(keys)[0], line: tag.line});
               });
             }
-            else errors.push({tag: tag.name, c: set.innerTags.call(keys)[0], line: tag.line});
+            else errors.push({tag: tag.name, child: set.innerTags.call(keys)[0], line: tag.line});
           } 
         });
         return errors;
@@ -402,7 +404,7 @@ var doctype = {
         sets.call(map, function(set) {
           if (set.tags[tag.name])
             if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, get, "name").call(makeMap).call(keys).length < 1)
-              errors.push({parent: tag, children: set.innerTags, line: tag.line});
+              errors.push({parent: tag, child: set.innerTags, line: tag.line});
         });
         return errors;
       },
@@ -441,19 +443,19 @@ var doctype = {
       }
     },
     messages: {
-      allowed_attributes: "<tag> can't have [attrs]",
-      allowed_attribute_values: "<tag> [test] [attr] must be [format]",
-      allowed_tags: "<tag> isn't a valid tag",
+      allowed_attributes: "<tag> can't have attribute[s] [attr or attr]",
+      allowed_attribute_values: "<tag> attribute [attr] must be [format]",
+      allowed_tags: "<tag> isn't a valid element",
       allowed_children: "<parent> can't contain <child>", //make this collect all invalid children
-      exact_children: "<parent> must contain exactly <required> but currently contains <children>",
-      exclusive_children: "<parent> can't contain both <children>",
+      exact_children: "<parent> must contain exactly <required and required> but currently contains <child and child>",
+      exclusive_children: "<parent> can't contain both <child and child>",
       not_empty: "<tag> can't be empty",
       not_opened: "<tag> must have an opening tag",
       not_optionally_closed: "<tag> must have a closing tag",
-      ordered_children: "The contents of <tag> must be ordered <required> but are currently ordered <children>",
-      required_attributes: "<tag> must contain <attrs>",
+      ordered_children: "The contents of <tag> must be ordered <ordered then ordered> but are currently ordered <child then child>",
+      required_attributes: "<tag> must contain attribute[s] [attr and attr]",
       required_first_child: "The contents of <tag> must start with <child>",
-      required_at_least_one_child: "<tag> must contain at least one of <children>",
+      required_at_least_one_child: "<tag> must contain at least one of <child or child>",
       required_children: "<parent> must contain <child>",
       unary: "<tag> must not have a closing tag",
       unique_children: "<parent> can't contain more than one <child>" //add count
@@ -631,7 +633,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
-var html = "<html style='bar>\"' id='1a_b' class disabled=\"asdsa\">";
+var html = "<html style='bar>\"' id='1a_b' class disabled=\"asdsa\"><img>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
