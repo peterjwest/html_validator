@@ -234,7 +234,7 @@ var doctype = {
     var doctype = this, errors = [], current;
     var matchTag = /(<)(([^<>\s]+)[^<>]*)>/g, matchAttr = /(\[)(([^\[\]\s]+)[^\[\]]*)\]/g;
     var insertItem = function(match, type, options, name, position, string) {
-      if (!current[name]) return match;
+      if (current[name] === undefined) return match;
       var list = current[name].join;
       var separator = (options.match(/\s+\S+\s+/) || [" and "])[0];
       if (type == "<") {
@@ -453,7 +453,7 @@ var doctype = {
       not_opened: "<tag> must have an opening tag",
       not_optionally_closed: "<tag> must have a closing tag",
       ordered_children: "The contents of <tag> must be ordered <ordered then ordered> but are currently ordered <child then child>",
-      required_attributes: "<tag> must contain attribute[s] [attr and attr]",
+      required_attributes: "<tag> must have attribute[s] [attr and attr]",
       required_first_child: "The contents of <tag> must start with <child>",
       required_at_least_one_child: "<tag> must contain at least one of <child or child>",
       required_children: "<parent> must contain <child>",
