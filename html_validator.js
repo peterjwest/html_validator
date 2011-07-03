@@ -267,12 +267,11 @@ var doctype = {
         names: /^\s*(([a-z][a-z0-9-_:.]*)|\s+)+$/i
       },
       messages: {
-        cdata: "anything",
-        number: "a number",
-        length: "a number or percentage",
-        multi_length: "a number, percentage or relative length (e.g. 3*)",
-        name: "an alphanumeric name which starts with a letter and can contain only these symbols: '-_:.'",
-        names: "a whitespace separated list of alphanumeric names which starts with a letter and can contain only these symbols: '-_:.'"
+        number: "an integer number",
+        length: "an integer number or percentage",
+        multi_length: "an integer number, percentage or relative length (e.g. 3*)",
+        name: "an start with a letter and can contain only letters, numbers and the following: .-_:",
+        names: "a list of items separated with spaces. Each item must start with a letter and can contain only letters, numbers and the following: .-_:"
       }
     },
     rules: {
@@ -286,19 +285,24 @@ var doctype = {
         return [];
       },
       allowed_attribute_values: function(doctype, doc) {
-        var tag = this, errors = [];
+        var tag = this, errors = [], format, message, formatName;
         (this.attrs || []).call(map, function(attr) {
           if (!doctype.tags[tag.name]) return;
           var values = (doctype.tags[tag.name].attrs.all[attr.name] || "");
-          if (values.match("#")) {
-            var formatName = values.replace("#", "");
-            var format = doctype.rules.attribute_values.formats[formatName];
-            var message = doctype.rules.attribute_values.messages[formatName];
+          if (values == "#self") {
+            console.log("self");
+            format = attr.name;
+            message = "'"+attr.name+"'";
+          }
+          else if (values.match("#")) {
+            formatName = values.replace("#", "");
+            format = doctype.rules.attribute_values.formats[formatName];
+            message = doctype.rules.attribute_values.messages[formatName];
           }
           else if (values.match(/\S/)) {  
             values = values.split(",");
-            var format = new RegExp("^("+values.join("|")+")$");
-            var message = (values.length > 1 ? "one of " : "")+values.call(englishList, " or ");
+            format = new RegExp("^("+values.join("|")+")$");
+            message = (values.length > 2 ? "one of " : "")+values.call(englishList, " or ");
           }
           if (format && !(attr.value || "").match(format)) {
             errors.push({tag: tag.name, attr: attr.name, format: message, line: tag.line});
@@ -444,7 +448,7 @@ var doctype = {
     },
     messages: {
       allowed_attributes: "<tag> can't have attribute[s] [attr or attr]",
-      allowed_attribute_values: "<tag> attribute [attr] must be [format]",
+      allowed_attribute_values: "<tag> element's attribute [attr] must be [format]",
       allowed_tags: "<tag> isn't a valid element",
       allowed_children: "<parent> can't contain <child>", //make this collect all invalid children
       exact_children: "<parent> must contain exactly <required and required> but currently contains <child and child>",
@@ -633,7 +637,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
-var html = "<html style='bar>\"' id='1a_b' class disabled=\"asdsa\"><img>";
+var html = "<body><img><p><a></a></p><form><fieldset><input checked='' disabled='blah'></fieldset></form></body>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
