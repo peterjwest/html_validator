@@ -23,6 +23,7 @@ var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice
 var sum = function(){ for (var i = 0, sum = 0; i < this.length; i++) sum += this[i]; return sum; };
 var values = function() { return this.call(mapEach, function(item) { return item; }); };
 var keys = function() { return this.call(mapEach, function(item, key) { return key; }); };
+var isString = function(item) { return item !== undefined && item !== null && item.substr; };
 
 var select = function(fn) {
   var array = [];
@@ -92,6 +93,7 @@ var englishList = function(separator) {
 
 var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
 var inTag = function() { return "<"+this+">"; };
+var inQuote = function() { return "'"+this+"'"; };
 var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
 var combineArrays = function(a,b) { return (a || []).concat(b || []); }
 
@@ -211,7 +213,7 @@ var doctype = {
         tag.attrs = tag.attrs || {};
         tag.attrs[type] = tag.attrs[type] || {};
         attrs.call(map, function(attr) {
-          if ((attr.include && attr.include[name]) || (attr.exclude && !attr.exclude[name])) {           
+          if ((attr.include && attr.include[name]) || (attr.exclude && !attr.exclude[name])) {
             tag.attrs[type] = tag.attrs[type].call(merge, attr.attrs);
           }
         });
@@ -271,7 +273,9 @@ var doctype = {
         length: "an integer number or percentage",
         multi_length: "an integer number, percentage or relative length (e.g. 3*)",
         name: "an start with a letter and can contain only letters, numbers and the following: .-_:",
-        names: "a list of items separated with spaces. Each item must start with a letter and can contain only letters, numbers and the following: .-_:"
+        names:
+          "a list of items separated with spaces. Each item must start with a letter and can contain only letters,"+
+          "numbers and the following: .-_:"
       }
     },
     rules: {
@@ -290,19 +294,18 @@ var doctype = {
           if (!doctype.tags[tag.name]) return;
           var values = (doctype.tags[tag.name].attrs.all[attr.name] || "");
           if (values == "#self") {
-            console.log("self");
             format = attr.name;
-            message = "'"+attr.name+"'";
+            message = attr.name.call(inQuote);
           }
           else if (values.match("#")) {
             formatName = values.replace("#", "");
             format = doctype.rules.attribute_values.formats[formatName];
             message = doctype.rules.attribute_values.messages[formatName];
           }
-          else if (values.match(/\S/)) {  
+          else if (values.match(/\S/)) {
             values = values.split(",");
             format = new RegExp("^("+values.join("|")+")$");
-            message = (values.length > 2 ? "one of " : "")+values.call(englishList, " or ");
+            message = (values.length > 2 ? "one of " : "")+values.call(map, method, inQuote).call(englishList, " or ");
           }
           if (format && !(attr.value || "").match(format)) {
             errors.push({tag: tag.name, attr: attr.name, format: message, line: tag.line});
@@ -472,11 +475,11 @@ var htmlParser = function(html, doctype) {
   var endTag = /<\/(\w+)[^>]*>/;
   var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
   var doc = { name: '#root', children: [], all: [], closed: true };
-  doc.all.push(doc);
   var index, match, endedTag, lastHtml = html, current = doc;
   var depth = function(tag) { return current.call(stack).call(map, get, "name").call(makeMap)[tag] - 1; };
   var min = function() { return Math.min.apply({}, this); };
   var last = function() { return this[this.length - 1]; };
+  doc.all.push(doc);
   
   //Computes allowed child elements based on allowed_children and allowed_descendents rules
   var allowedChildren = function() {
@@ -531,11 +534,12 @@ var htmlParser = function(html, doctype) {
     }
 
     var unary = doctype.groups.tags.unary[tag] || !!selfClosed;
-    var attrs = [];
+    var attrs = [], values = [];
     var value = "";
     //Parse attributes and their values
     rest.replace(attr, function(match, name) {
-      value = arguments[2] || arguments[3] || arguments[4] || (doctype.tags[tag].attrs.all[name] ? name : "");
+      values = arguments.call([].slice, 2, 5).concat([doctype.tags[tag].attrs.all[name] ? name : ""]);
+      value = values.call(select, isString)[0];
       attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
     });
     var element = {
@@ -637,7 +641,7 @@ var htmlParser = function(html, doctype) {
 };
 
 var html = "<title></title>\n<table><tbody></tbody><col></table><tag><img banana='yes'></img></tag><form action=''><fish></fish><fieldset><img><legend></legend><legend></legend><input><!--</html><!-- :D --></fieldset>\n</form><table>\n<col>\n<tr><td></tbody></table>\n<del><p>hallo</p></del>\n</body><img></html>";
-var html = "<body><img><p><a></a></p><form><fieldset><input checked='' disabled='blah'></fieldset></form></body>";
+var html = "<body><img><p><a></a></p><form><fieldset><input type checked disabled='blah'></fieldset></form></body>";
 var spec = new html_401_spec(doctype);
 spec.compute();
 var doc = htmlParser(html, spec.transitional);
