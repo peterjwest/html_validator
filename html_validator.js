@@ -476,190 +476,189 @@
     return response;
   };
   
-  $.validateHtml = function(options) {
-    
+  $.htmlValidator = function(options) {
     return callable(function() {
-      //if (options) { $.extend({}, options); }
-      if (options.compute) {
-        spec = new options.spec(baseDoctype);
+      var settings = {};
+      if (options) { $.extend(settings, options); }
+      if (settings.mode == "compute") {
+        spec = new settings.spec(baseDoctype);
         spec.compute();
         return spec;
       }
-      var html = options.html;
-      var doctype = options.doctype;
-      var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
-      var endTag = /<\/(\w+)[^>]*>/;
-      var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
-      var doc = { name: '#root', children: [], all: [], closed: true };
-      var index, match, endedTag, lastHtml = html, current = doc;
-      var depth = function(tag) { return current.call(stack).call(map, get, "name").call(makeMap)[tag] - 1; };
-      var min = function() { return Math.min.apply({}, this); };
-      var last = function() { return this[this.length - 1]; };
-      doc.all.push(doc);
-      
-      //Computes allowed child elements based on allowed_children and allowed_descendents rules
-      var allowedChildren = function() {
-        var obj = {};
-        this.call(stack).call(map, function(tag) { 
-          obj.call(merge, doctype.tags[tag.name].allowed_descendents || {}); 
-        });
-        obj.call(merge, doctype.tags[this.name].allowed_children || {});
-        return obj;
-      };
-      
-      var parseStartTag = function(html, tag, rest, selfClosed) {
-        var prev = current.children.call(htmlTags).call(last);
-        //Checks for implicit child elements
-        if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
-          var implicit = false;
-          doctype.tags[current.name].implicit_children.call(each, function(implicitChild, position) {
-            if (implicit) return;
-            //Looks for an implied child element with an exact position
-            if (doctype.tags[current.name].exact_children) {
-              if (implicitChild != tag && current.children.call(htmlTags).length + 1 == position) {
-                implicit = implicitChild;
-              }
-            }
-            //Looks for an implied child element within a specific order
-            else if (doctype.tags[current.name].ordered_children) {
-              var orderedChildren = doctype.tags[current.name].ordered_children;
-              var children = current.children.call(htmlTags);
-              var invalidBeforeTags = children.call(select, function(child) { return orderedChildren[child] > position; }).length;
-              if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
-                implicit = implicitChild;
-              }
-            }
-          });
-          //Adds the implied element if one has been found, restarts the parseStartTag process for this element
-          if (implicit && (!prev || prev.name+"" != implicit || !prev.implicit)) {
-            var element = {name: implicit, implicit: true, attrs: [], parent: current, unary: false, children: [], html: ''};
-            current.children.push(element);
-            doc.all.push(element);
-            current = element;
-            return parseStartTag(html, tag, rest, selfClosed);
-          }
-        }
+      var html = settings.html;
+      var doctype = settings.doctype;
+      if (settings.mode == "parse") {
+        var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
+        var endTag = /<\/(\w+)[^>]*>/;
+        var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
+        var doc = { name: '#root', children: [], all: [], closed: true };
+        var index, match, endedTag, lastHtml = html, current = doc;
+        var depth = function(tag) { return current.call(stack).call(map, get, "name").call(makeMap)[tag] - 1; };
+        var min = function() { return Math.min.apply({}, this); };
+        var last = function() { return this[this.length - 1]; };
+        doc.all.push(doc);
         
-        //Closes the current element if it is optionally closed and the new element doesn't belong inside it,
-        //restarts the parseStartTag process for this element
-        if (doctype.groups.tags.close_optional[current.name]) {
-          if (!current.call(allowedChildren)[tag] && !doctype.groups.tags.last_child[current.name]) {
-            parseEndTag("", current.name);
-            return parseStartTag(html, tag, rest, selfClosed);
-          }
-        }
-
-        var unary = doctype.groups.tags.unary[tag] || !!selfClosed;
-        var attrs = [], values = [];
-        var value = "";
-        //Parse attributes and their values
-        rest.replace(attr, function(match, name) {
-          values = arguments.call([].slice, 2, 5).concat([doctype.tags[tag].attrs.all[name] ? name : ""]);
-          value = values.call(select, isString)[0];
-          attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
-        });
-        var element = {
-          name: tag, implicit: !html, attrs: attrs, parent: current,
-          unary: unary, selfClosed: !!selfClosed, children: [], html: html
-        };
-        current.children.push(element);
-        doc.all.push(element);
-        if (!unary) current = element;
-      };
-      
-      var parseEndTag = function(html, tag) {
-        var index = tag ? current.call(depth, tag) : 0;
-        var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
-        //Deals with a number of existing elements being closed
-        if (endedTags.length > 0) {
-          endedTags.call(each, function(tag) {
-            var start = current;
-            //Checks for implicit elements which have not been added because they don't have any content
-            while (current !== start.parent) {
-              if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
-                var element = false;
-                doctype.tags[current.name].implicit_children.call(each, function(implicit) {
-                  if (!element && current.children.call(select, function(c) { return c.name+"" == implicit; }).length == 0) {
-                    element = { name: implicit, implicit: true, children: [], parent: current, html: '' };
-                    current.children.push(element);
-                    doc.all.push(element);
-                    current = element;
-                  }
-                });
-                if (!element) current = current.parent;
-              }
-              else current = current.parent;
-            }
-            current = start;
+        //Computes allowed child elements based on allowed_children and allowed_descendents rules
+        var allowedChildren = function() {
+          var obj = {};
+          this.call(stack).call(map, function(tag) { 
+            obj.call(merge, doctype.tags[tag.name].allowed_descendents || {}); 
           });
-          var endedTag = endedTags[0];
-          if (html) { 
-            endedTag.closed = true;
-            endedTag.endHtml = html;
+          obj.call(merge, doctype.tags[this.name].allowed_children || {});
+          return obj;
+        };
+        
+        var parseStartTag = function(html, tag, rest, selfClosed) {
+          var prev = current.children.call(htmlTags).call(last);
+          //Checks for implicit child elements
+          if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
+            var implicit = false;
+            doctype.tags[current.name].implicit_children.call(each, function(implicitChild, position) {
+              if (implicit) return;
+              //Looks for an implied child element with an exact position
+              if (doctype.tags[current.name].exact_children) {
+                if (implicitChild != tag && current.children.call(htmlTags).length + 1 == position) {
+                  implicit = implicitChild;
+                }
+              }
+              //Looks for an implied child element within a specific order
+              else if (doctype.tags[current.name].ordered_children) {
+                var orderedChildren = doctype.tags[current.name].ordered_children;
+                var children = current.children.call(htmlTags);
+                var invalidBeforeTags = children.call(select, function(child) { return orderedChildren[child] > position; }).length;
+                if (invalidBeforeTags == 0 && (!orderedChildren[tag] || orderedChildren[tag] > position)) {
+                  implicit = implicitChild;
+                }
+              }
+            });
+            //Adds the implied element if one has been found, restarts the parseStartTag process for this element
+            if (implicit && (!prev || prev.name+"" != implicit || !prev.implicit)) {
+              var element = {name: implicit, implicit: true, attrs: [], parent: current, unary: false, children: [], html: ''};
+              current.children.push(element);
+              doc.all.push(element);
+              current = element;
+              return parseStartTag(html, tag, rest, selfClosed);
+            }
           }
-          current = endedTag.parent;
-        }
-        //Deals with an unopened element being closed
-        else {
-          var element = {name: tag, unopened: true, closed: true, endHtml: html};
+          
+          //Closes the current element if it is optionally closed and the new element doesn't belong inside it,
+          //restarts the parseStartTag process for this element
+          if (doctype.groups.tags.close_optional[current.name]) {
+            if (!current.call(allowedChildren)[tag] && !doctype.groups.tags.last_child[current.name]) {
+              parseEndTag("", current.name);
+              return parseStartTag(html, tag, rest, selfClosed);
+            }
+          }
+
+          var unary = doctype.groups.tags.unary[tag] || !!selfClosed;
+          var attrs = [], values = [];
+          var value = "";
+          //Parse attributes and their values
+          rest.replace(attr, function(match, name) {
+            values = arguments.call([].slice, 2, 5).concat([doctype.tags[tag].attrs.all[name] ? name : ""]);
+            value = values.call(select, isString)[0];
+            attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
+          });
+          var element = {
+            name: tag, implicit: !html, attrs: attrs, parent: current,
+            unary: unary, selfClosed: !!selfClosed, children: [], html: html
+          };
           current.children.push(element);
           doc.all.push(element);
+          if (!unary) current = element;
+        };
+        
+        var parseEndTag = function(html, tag) {
+          var index = tag ? current.call(depth, tag) : 0;
+          var endedTags = index >= 0 ? current.call(stack).slice(index) : [];
+          //Deals with a number of existing elements being closed
+          if (endedTags.length > 0) {
+            endedTags.call(each, function(tag) {
+              var start = current;
+              //Checks for implicit elements which have not been added because they don't have any content
+              while (current !== start.parent) {
+                if (doctype.tags[current.name] && doctype.tags[current.name].implicit_children) {
+                  var element = false;
+                  doctype.tags[current.name].implicit_children.call(each, function(implicit) {
+                    if (!element && current.children.call(select, function(c) { return c.name+"" == implicit; }).length == 0) {
+                      element = { name: implicit, implicit: true, children: [], parent: current, html: '' };
+                      current.children.push(element);
+                      doc.all.push(element);
+                      current = element;
+                    }
+                  });
+                  if (!element) current = current.parent;
+                }
+                else current = current.parent;
+              }
+              current = start;
+            });
+            var endedTag = endedTags[0];
+            if (html) { 
+              endedTag.closed = true;
+              endedTag.endHtml = html;
+            }
+            current = endedTag.parent;
+          }
+          //Deals with an unopened element being closed
+          else {
+            var element = {name: tag, unopened: true, closed: true, endHtml: html};
+            current.children.push(element);
+            doc.all.push(element);
+          }
+        };
+       
+        while (html) {
+          if (current && doctype.groups.tags.cdata_elements[current.name]) {
+            //removed "[^>]*" from regex end, need to check with John Resig
+            html = html.replace(new RegExp("(.*)<\/"+current.name+">"), function(all, text) {
+              //need more robust solution, and logging of whether cdata tag is used
+              text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
+              current.children.push({name: '#text', value: text, unary: true, html: all});
+              return "";
+            });
+            parseEndTag("", current.name);
+          } 
+          else if (html.indexOf("<!--") == 0) {
+            var end = html.indexOf("-->");
+            current.children.push({ name: "#comment", value: html.substring(4, end), html: html.substring(0, end + 3), closed: end != -1 });
+            html = end == -1 ? "" : html.substring(end + 3);
+          }
+          else if (html.search(endTag) == 0) {
+            match = html.match(endTag);
+            html = html.substring(match[0].length);
+            match[0].replace(endTag, parseEndTag);
+          }
+          else if (html.search(startTag) == 0) {
+            match = html.match(startTag);
+            html = html.substring(match[0].length);
+            match[0].replace(startTag, parseStartTag);
+          }
+          else {
+            var matches = [html.search(startTag), html.search(endTag), html.indexOf("<!--")];
+            index = (matches.call(select, function(match) { return match >= 0; }) || []).call(min);
+            var text = index < 0 ? html : html.substring(0, index);
+            current.children.push({name: '#text', value: text, html: text, unary: true});
+            html = index < 0 ? "" : html.substring(index);
+          }
+          if (html == lastHtml) throw "Parse Error: " + html;
+          lastHtml = html;
         }
-      };
-     
-      while (html) {
-        if (current && doctype.groups.tags.cdata_elements[current.name]) {
-          //removed "[^>]*" from regex end, need to check with John Resig
-          html = html.replace(new RegExp("(.*)<\/"+current.name+">"), function(all, text) {
-            //need more robust solution, and logging of whether cdata tag is used
-            text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
-            current.children.push({name: '#text', value: text, unary: true, html: all});
-            return "";
-          });
-          parseEndTag("", current.name);
-        } 
-        else if (html.indexOf("<!--") == 0) {
-          var end = html.indexOf("-->");
-          current.children.push({ name: "#comment", value: html.substring(4, end), html: html.substring(0, end + 3), closed: end != -1 });
-          html = end == -1 ? "" : html.substring(end + 3);
-        }
-        else if (html.search(endTag) == 0) {
-          match = html.match(endTag);
-          html = html.substring(match[0].length);
-          match[0].replace(endTag, parseEndTag);
-        }
-        else if (html.search(startTag) == 0) {
-          match = html.match(startTag);
-          html = html.substring(match[0].length);
-          match[0].replace(startTag, parseStartTag);
-        }
-        else {
-          var matches = [html.search(startTag), html.search(endTag), html.indexOf("<!--")];
-          index = (matches.call(select, function(match) { return match >= 0; }) || []).call(min);
-          var text = index < 0 ? html : html.substring(0, index);
-          current.children.push({name: '#text', value: text, html: text, unary: true});
-          html = index < 0 ? "" : html.substring(index);
-        }
-        if (html == lastHtml) throw "Parse Error: " + html;
-        lastHtml = html;
+        parseEndTag("");
+        var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
+        var line = 1;
+        var findLines = function() {
+          this.line = line; 
+          if (this.html) line += this.html.call(newlines);
+          if (this.children) this.children.call(map, function(child) { child.call(findLines); });
+          if (this.endHtml) line += this.endHtml.call(newlines);
+        };
+        doc.call(findLines);
+        return doc;
       }
-      parseEndTag("");
-      var newlines = function() { return (this.match(/(\r\n|\n|\r)/g) || []).length; };
-      var line = 1;
-      var findLines = function() {
-        this.line = line; 
-        if (this.html) line += this.html.call(newlines);
-        if (this.children) this.children.call(map, function(child) { child.call(findLines); });
-        if (this.endHtml) line += this.endHtml.call(newlines);
-      };
-      doc.call(findLines);
-      
-      console.log(doctype);
-      console.log(doc);
-      console.log(doc.call(draw));
-      console.log(doctype.validate(doc));
-      
-      return doc;
+      if (settings.mode == "validate") {
+        return doctype.validate(settings.doc);
+      }
     });
   };
 })(jQuery);
