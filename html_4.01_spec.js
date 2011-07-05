@@ -1,10 +1,6 @@
-var html_401_spec = function(doctype) {
-  this.compute = function() {
-    this.strict.compute();
-    this.transitional.compute();
-    this.frameset.compute();
-  };
+jQuery.htmlValidator().addSpec(function(doctype) {
   this.strict = doctype.extend({
+    name: "HTML 4.01 Strict",
     groups: {
       tags: {
         all: 'a,abbr,acronym,address,area,b,base,bdo,big,blockquote,body,br,button,caption,cite,code,col,colgroup,dd,del,dfn,div,dl,dt,em,fieldset,form,h1,h2,h3,h4,h5,h6,head,hr,html,i,img,input,ins,kbd,label,legend,li,link,map,meta,noscript,object,ol,optgroup,option,p,param,pre,q,#root,samp,script,select,small,span,strong,style,sub,sup,table,tbody,td,textarea,tfoot,th,thead,title,tr,tt,ul,var',
@@ -175,6 +171,7 @@ var html_401_spec = function(doctype) {
   });
   
   this.transitional = this.strict.extend({
+    name: "HTML 4.01 Transitional",
     groups: {
       tags: {
         all: '+applet,basefont,center,dir,font,iframe,isindex,menu,s,strike,u,noframes',
@@ -237,6 +234,7 @@ var html_401_spec = function(doctype) {
   });
 
   this.frameset = this.transitional.extend({
+    name: "HTML 4.01 Frameset",
     groups: {
       tags: {
         all: '+frame,frameset',
@@ -264,4 +262,4 @@ var html_401_spec = function(doctype) {
       required_at_least_one_child: [{tags: 'frameset', innerTags: 'frameset,frame'}]
     }
   });
-};
+});
