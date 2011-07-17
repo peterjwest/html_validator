@@ -1,5 +1,5 @@
-jQuery.htmlValidator().addSpec(function(doctype) {
-  this.strict = doctype.extend({
+jQuery.htmlValidator().addSpec(function(baseDoctype) {
+  this.strict = baseDoctype.extend({
     name: "HTML 4.01 Strict",
     groups: {
       tags: {
