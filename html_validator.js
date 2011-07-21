@@ -673,7 +673,7 @@
       settings = settings || {};
       return this.callable(function() {
         var doctype = settings.doctype.validate ? settings.doctype : (this.doctype(settings.doctype) || this.doctypes[0]);
-        return parse(doctype, html);
+        return parse(doctype, settings.html);
       });
     },
     
