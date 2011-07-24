@@ -4,6 +4,8 @@
 
 (function($){
   $.fn.outerHtml = function() {
+    console.log(this.length);
+    if (this.length == 0) return false;
     var elem = this[0], name = elem.tagName.toLowerCase();
     var attrs = $.map(elem.attributes, function(i) { return i.name+'="'+i.value+'"'; }); 
     return "<"+name+(attrs.length > 0 ? " "+attrs.join(" ") : "")+">"+elem.innerHTML+"</"+name+">";
