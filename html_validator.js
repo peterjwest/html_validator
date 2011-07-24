@@ -3,6 +3,12 @@
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
 (function($){
+  $.fn.outerHtml = function() {
+    var elem = this[0], name = elem.tagName.toLowerCase();
+    var attrs = $.map(elem.attributes, function(i) { return i.name+'="'+i.value+'"'; }); 
+    return "<"+name+(attrs.length > 0 ? " "+attrs.join(" ") : "")+">"+elem.innerHTML+"</"+name+">";
+  };
+
   var each = function(fn) {
     for(var i in this) if (this.call(Object.hasOwnProperty, i)) this.call(fn, this[i], i, this);
     return this;
@@ -469,11 +475,12 @@
     }
   };
   
-  var parse = function(doctype, html) {
+  var parse = function(settings) {
     var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
     var endTag = /<\/(\w+)[^>]*>/;
     var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
     var doc = { name: '#root', children: [], all: [], closed: true };
+    var html = settings.html, doctype = settings.doctype;
     var index, match, endedTag, lastHtml = html, current = doc;
     var depth = function(tag) { return current.call(stack).call(map, get, "name").call(makeMap)[tag] - 1; };
     var min = function() { return Math.min.apply({}, this); };
@@ -639,7 +646,6 @@
     return doc;
   }
   
-  
   var validator = {
     doctypes: [],
     
@@ -669,18 +675,25 @@
       this.doctypes = this.doctypes.concat(doctypes);
     },
     
+    parseSettings: function(settings) {
+      this.callable(function() {
+        settings = settings || {};
+        if (!settings.doctype || !settings.doctype.validate) settings.doctype = (this.doctype(settings.doctype) || this.doctypes[0]);
+        if (!settings.html || settings.html.jquery) settings.html = (settings.html || $("html")).outerHtml();
+      });
+      return settings;
+    },
+    
     parse: function(settings) {
-      settings = settings || {};
+      settings = this.parseSettings(settings);
       return this.callable(function() {
-        var doctype = settings.doctype.validate ? settings.doctype : (this.doctype(settings.doctype) || this.doctypes[0]);
-        return parse(doctype, settings.html);
+        return parse(settings);
       });
     },
     
     validate: function(settings) {
-      settings = settings || {};
+      settings = this.parseSettings(settings);
       return this.callable(function() {
-        settings.doctype = this.doctype(settings.doctype) || this.doctypes[0];
         return settings.doctype.validate(this.parse(settings));
       });
     }
