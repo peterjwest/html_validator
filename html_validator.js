@@ -2,6 +2,9 @@
 //Original parser By John Resig (ejohn.org) http://ejohn.org/blog/pure-javascript-html-parser/
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
+//Oh no! I'm changing the Object prototype! This is the only prototype change I will make
+//and allows functions to be called as methods. Read more here: 
+//http://www.extended-gameplay.com/#/title+Flipped_call()_method_in_Javascript/
 Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.slice.call(arguments, 1)); };
 
 (function($){
@@ -653,53 +656,35 @@ Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.sli
   var validator = {
     doctypes: [],
     
-    callable: function(fn) {
-      var call = Object.prototype.call;
-      Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.slice.call(arguments, 1)); };
-      var response = this.call(fn);
-      Object.prototype.call = call;
-      return response;
-    },
-    
     doctype: function(name) {
-      //return this.callable(function() {
-        return this.doctypes.call(select, function(doctype) { 
-          return doctype.name == name;
-        })[0];
-      //});
+      return this.doctypes.call(select, function(doctype) { 
+        return doctype.name == name;
+      })[0];
     },
     
     addSpec: function(spec) {
       var doctypes = [];
-      //this.callable(function() {
-        (new spec(baseDoctype)).call(each, function(doctype) {
-          doctypes.push(doctype.compute());
-        });
-      //});
+      (new spec(baseDoctype)).call(each, function(doctype) {
+        doctypes.push(doctype.compute());
+      });
       this.doctypes = this.doctypes.concat(doctypes);
     },
     
     parseSettings: function(settings) {
-      //this.callable(function() {
-        settings = settings || {};
-        if (!settings.doctype || !settings.doctype.validate) settings.doctype = (this.doctype(settings.doctype) || this.doctypes[0]);
-        if (!settings.html || settings.html.jquery) settings.html = (settings.html || $("html")).outerHtml();
-      //});
+      settings = settings || {};
+      if (!settings.doctype || !settings.doctype.validate) settings.doctype = (this.doctype(settings.doctype) || this.doctypes[0]);
+      if (!settings.html || settings.html.jquery) settings.html = (settings.html || $("html")).outerHtml();
       return settings;
     },
     
     parse: function(settings) {
       settings = this.parseSettings(settings);
-      //return this.callable(function() {
-        return parse(settings);
-      //});
+      return parse(settings);
     },
     
     validate: function(settings) {
       settings = this.parseSettings(settings);
-      //return this.callable(function() {
-        return settings.doctype.validate(this.parse(settings));
-      //});
+      return settings.doctype.validate(this.parse(settings));
     }
   };
   
