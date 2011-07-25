@@ -2,11 +2,13 @@
 //Original parser By John Resig (ejohn.org) http://ejohn.org/blog/pure-javascript-html-parser/
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
+Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.slice.call(arguments, 1)); };
+
 (function($){
   $.fn.outerHtml = function() {
-    console.log(this.length);
     if (this.length == 0) return false;
     var elem = this[0], name = elem.tagName.toLowerCase();
+    if (elem.outerHTML) return elem.outerHTML;
     var attrs = $.map(elem.attributes, function(i) { return i.name+'="'+i.value+'"'; }); 
     return "<"+name+(attrs.length > 0 ? " "+attrs.join(" ") : "")+">"+elem.innerHTML+"</"+name+">";
   };
@@ -660,44 +662,44 @@
     },
     
     doctype: function(name) {
-      return this.callable(function() {
+      //return this.callable(function() {
         return this.doctypes.call(select, function(doctype) { 
           return doctype.name == name;
         })[0];
-      });
+      //});
     },
     
     addSpec: function(spec) {
       var doctypes = [];
-      this.callable(function() {
+      //this.callable(function() {
         (new spec(baseDoctype)).call(each, function(doctype) {
           doctypes.push(doctype.compute());
         });
-      });
+      //});
       this.doctypes = this.doctypes.concat(doctypes);
     },
     
     parseSettings: function(settings) {
-      this.callable(function() {
+      //this.callable(function() {
         settings = settings || {};
         if (!settings.doctype || !settings.doctype.validate) settings.doctype = (this.doctype(settings.doctype) || this.doctypes[0]);
         if (!settings.html || settings.html.jquery) settings.html = (settings.html || $("html")).outerHtml();
-      });
+      //});
       return settings;
     },
     
     parse: function(settings) {
       settings = this.parseSettings(settings);
-      return this.callable(function() {
+      //return this.callable(function() {
         return parse(settings);
-      });
+      //});
     },
     
     validate: function(settings) {
       settings = this.parseSettings(settings);
-      return this.callable(function() {
+      //return this.callable(function() {
         return settings.doctype.validate(this.parse(settings));
-      });
+      //});
     }
   };
   

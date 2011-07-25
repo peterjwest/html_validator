@@ -4,20 +4,23 @@ $(document).ready(function() {
   console.log(validator.doctypes);
   console.log(validator.parseSettings());
   console.log(validator.parseSettings({}));
-  console.log(validator.parseSettings({html: $("div")}));
+  console.log(validator.parseSettings({url: ""}));
   console.log(validator.parseSettings({html: html}));
-  /*console.log(validator.parse({doctype: "HTML 4.01 Transitional"}));
-  console.log(validator.parse({doctype: "HTML 4.01 Transitional", html: html}));
-  console.log(validator.parse({doctype: validator.doctype("HTML 4.01 Transitional"), html: html}));
-  console.log(validator.validate({doctype: "HTML 4.01 Transitional", html: html}));
-  console.log(validator.doctype("HTML 4.01 Transitional"));*/
-  // $.htmlValidator().validate();
-  // $.htmlValidator().validate({string: $("html").html()});
-  // $.htmlValidator().validate({string: $("#section").html()});
-  // $.htmlValidator().validate({url: "http://www.google.com"});
-  // $.htmlValidator().validate({string: "<html></html>"});
-  // $.htmlValidator().validate({doctype: "html 5"});
-  // $.htmlValidator().validate({format: 'html'});
-  // $.htmlValidator().validate({format: 'list'});
-  // $.htmlValidator().validate({format: 'data'});
+  console.log(validator.parseSettings({fragment: $("div")}));
+  /*
+  validator.parse({doctype: "HTML 4.01 Transitional"});
+  validator.parse({doctype: "HTML 4.01 Transitional", html: html});
+  validator.parse({doctype: validator.doctype("HTML 4.01 Transitional"), html: html});
+  validator.validate({doctype: "HTML 4.01 Transitional", html: html});
+  validator.doctype("HTML 4.01 Transitional");
+  validator.validate();
+  validator.validate({string: $("html").html()});
+  validator.validate({string: $("#section").html()});
+  validator.validate({url: "http://www.google.com"});
+  validator.validate({string: "<html></html>"});
+  validator.validate({doctype: "html 5"});
+  validator.validate({format: 'html'});
+  validator.validate({format: 'list'});
+  validator.validate({format: 'data'});
+  */
 });
