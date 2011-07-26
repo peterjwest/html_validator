@@ -13,9 +13,9 @@ describe("Each Method", function() {
   
   describe("when passed a function", function() {
     describe("when called on an object", function() {
-      it("should return the object", function() {
+      it("should return an array", function() {
         var object = {};
-        expect(object.call(each, function() { })).toEqual(object);
+        expect(object.call(each, function() { })).toBe();
       });
     });
   
@@ -43,9 +43,9 @@ describe("Each Method", function() {
       it("should call the function in the scope of the object", function() {
         objs = [];
         object.call(each, function() { objs.push(this); });
-        expect(objs[0]).toEqual(object);
-        expect(objs[1]).toEqual(object);
-        expect(objs[2]).toEqual(object);
+        expect(objs[0]).toBe(object);
+        expect(objs[1]).toBe(object);
+        expect(objs[2]).toBe(object);
       });
       
       it("should pass each attribute as the first parameter to the function", function() {
@@ -118,9 +118,9 @@ describe("Map Method", function() {
       it("should call the function in the scope of the array", function() {
         objs = [];
         array.call(map, function() { objs.push(this); });
-        expect(objs[0]).toEqual(array);
-        expect(objs[1]).toEqual(array);
-        expect(objs[2]).toEqual(array);
+        expect(objs[0]).toBe(array);
+        expect(objs[1]).toBe(array);
+        expect(objs[2]).toBe(array);
       });
       
       it("should pass each element as the first parameter to the function", function() {

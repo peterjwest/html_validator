@@ -18,8 +18,9 @@ var variables = {};
   };
 
   var each = function(fn) {
-    for (var i in this) if (this.call(Object.hasOwnProperty, i)) this.call(fn, this[i], i);
-    return this;
+    var array = [];
+    for (var i in this) if (this.call(Object.hasOwnProperty, i)) array.push(this.call(fn, this[i], i));
+    return array;
   };
 
   var map = function(fn) {
@@ -140,13 +141,9 @@ var variables = {};
     map.call(each, function(value, name) {
       if (groups[name]) {
         delete map[name];
-        map.call(
-          merge, 
-          groups[name].call(expandList, groups).call(
-            each, 
-            function(item, tag) { this[tag] = value; }
-          )
-        );
+        var group = groups[name].call(expandList, groups);
+        group.call(each, function(item, tag) { this[tag] = value; });
+        map.call(merge, group);
       }
     });
     return map;
