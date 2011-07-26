@@ -14,7 +14,7 @@
   var getClass = function(obj) { 
     return obj !== undefined && obj !== null && Object.prototype.toString.call(obj).slice(8, -1); 
   };
-  var is = function(findClass, obj) { return getClass(obj) === findClass; 
+  var is = function(findClass, obj) { return getClass(obj) === findClass; };
 
   (function() {
     var jasmineEnv = jasmine.getEnv();
