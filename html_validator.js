@@ -6,8 +6,9 @@
 //and allows functions to be called as methods. Read more here: 
 //http://www.extended-gameplay.com/#/title+Flipped_call()_method_in_Javascript/
 Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.slice.call(arguments, 1)); };
+var variables = {};
 
-(function($){
+(function($) {
   $.fn.outerHtml = function() {
     if (this.length == 0) return false;
     var elem = this[0], name = elem.tagName.toLowerCase();
@@ -31,7 +32,6 @@ Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.sli
 
   var get = function(item, key, attr) { return item[attr] };
   var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
-  var sum = function(){ for (var i = 0, sum = 0; i < this.length; i++) sum += this[i]; return sum; };
   var values = function() { return this.call(mapEach, function(item) { return item; }); };
   var keys = function() { return this.call(mapEach, function(item, key) { return key; }); };
   var isString = function(item) { return item !== undefined && item !== null && item.substr; };
@@ -691,4 +691,6 @@ Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.sli
   $.htmlValidator = function() {
     return validator;
   };
+  
+  variables = {each: each, map: map};
 })(jQuery);

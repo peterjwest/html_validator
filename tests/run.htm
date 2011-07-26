@@ -1,0 +1,26 @@
+<!doctype html><html><title>HTML Validator Tests</title>
+<link rel="shortcut icon" type="image/png" href="../jasmine/jasmine_favicon.png">
+<link rel="stylesheet" type="text/css" href="../jasmine/jasmine.css">
+<script type="text/javascript" src="../jasmine/jasmine.js"></script>
+<script type="text/javascript" src="../jasmine/jasmine-html.js"></script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.js"></script>
+<script src="../html_validator.js"></script>
+<script src="../html_4.01_spec.js"></script>
+
+<script type="text/javascript" src="call_method_spec.js"></script>
+<script type="text/javascript" src="functional_methods_spec.js"></script>
+<script type="text/javascript">
+  (function() {
+    var jasmineEnv = jasmine.getEnv();
+    jasmineEnv.updateInterval = 1000;
+    var trivialReporter = new jasmine.TrivialReporter();
+    jasmineEnv.addReporter(trivialReporter);
+    jasmineEnv.specFilter = function(spec) { return trivialReporter.specFilter(spec); };
+    var currOnLoad = window.onload;
+    window.onload = function() {
+      if (currOnLoad) currOnLoad();
+      jasmineEnv.execute();
+    };
+  })();
+</script>
