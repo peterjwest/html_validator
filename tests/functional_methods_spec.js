@@ -6,8 +6,8 @@ describe("Each Method", function() {
   
   describe("when not passed a function", function() {
     it("should cause a method missing error", function() {
-      expect(function() { object.call(each); }).toThrow("Cannot call method 'apply' of undefined");
-      expect(function() { object.call(each, 0); }).toThrow("Object 0 has no method 'apply'");
+      expect(function() { object.call(each); }).toThrow();
+      expect(function() { object.call(each, 0); }).toThrow();
     });
   });
   

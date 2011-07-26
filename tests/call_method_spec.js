@@ -24,8 +24,8 @@ describe("Call Method", function() {
   
   describe("when passed a non-function", function() {
     it("should cause a method missing error", function() {
-      expect(function() { object.call(); }).toThrow("Cannot call method 'apply' of undefined");
-      expect(function() { object.call(0); }).toThrow("Object 0 has no method 'apply'");
+      expect(function() { object.call(); }).toThrow();
+      expect(function() { object.call(0); }).toThrow();
     });
   });
   
