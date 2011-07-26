@@ -22,6 +22,10 @@ I'd also like to use the platform to create an experimental doctype for best pra
 - Fix problem with frameset as frameset child
 - Add a lateral stack to find mistakenly closed unary elements
 - Rename tag to element where appropriate
+- Integrate as jQuery plugin, with AJAX call
+- Create XHTML 1.0 doctype
+- Create HTML 5 doctype
+- Create lots of tests!
 
 # The Parser
 
