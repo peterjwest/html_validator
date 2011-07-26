@@ -18,15 +18,22 @@ var variables = {};
   };
 
   var each = function(fn) {
-    for(var i in this) if (this.call(Object.hasOwnProperty, i)) this.call(fn, this[i], i, this);
+    for (var i in this) if (this.call(Object.hasOwnProperty, i)) this.call(fn, this[i], i);
     return this;
   };
 
   var map = function(fn) {
     var array = [];
+    var slice = Array.prototype.slice;
     for (var i = 0, obj; i < this.length; i++) {
-      array.push(fn.apply(this, [this[i], i].concat(Array.prototype.slice.call(arguments).slice(1))));
+      array.push(fn.apply(this, [this[i], i].concat(slice.call(arguments, 1))));
     }
+    return array;
+  };
+  
+  var mapEach = function(fn) {
+    var array = [];
+    this.call(each, function(item, name) { array.push({}.call(fn, item, name)); });
     return array;
   };
 
@@ -34,17 +41,10 @@ var variables = {};
   var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
   var values = function() { return this.call(mapEach, function(item) { return item; }); };
   var keys = function() { return this.call(mapEach, function(item, key) { return key; }); };
-  var isString = function(item) { return item !== undefined && item !== null && item.substr; };
 
   var select = function(fn) {
     var array = [];
     this.call(map, function(item, i) { if (fn.apply(item, arguments)) array.push(item); })
-    return array;
-  };
-
-  var mapEach = function(fn) {
-    var array = [];
-    this.call(each, function(item, name) { array.push({}.call(fn, item, name)); });
     return array;
   };
 
@@ -60,17 +60,19 @@ var variables = {};
     return obj;
   };
 
-  var groupUnique = function() {
-    var last, different;
-    return this.call(select, function(item) { different = last != item; last = item; return different; });
-  };
-
   var makeMap = function() {
     var obj = {};
     this.call(map, function(item, i) { obj[item] = i + 1; });
     return obj;
   };
+  
+  var groupUnique = function() {
+    var last, different;
+    return this.call(select, function(item) { different = last != item; last = item; return different; });
+  };
 
+  var isString = function(item) { return item !== undefined && item !== null && item.substr; };
+  
   var draw = function(indent) {
     var text = "";
     if (this.unopened) text += (indent||"")+"</"+this.name+">\n";
@@ -142,7 +144,7 @@ var variables = {};
           merge, 
           groups[name].call(expandList, groups).call(
             each, 
-            function(item, tag, group) { group[tag] = value; }
+            function(item, tag) { this[tag] = value; }
           )
         );
       }
@@ -195,7 +197,7 @@ var variables = {};
       });
       this.rulesets.call(each, function(ruleset, name) {
         ruleset.call(map, function(rules) {
-          rules.call(each, function(rule, type, rules) {
+          rules.call(each, function(rule, type) {
             rules[type] = rule.call(expandList, groups.tags, true);
           });
         });

@@ -5,7 +5,7 @@ describe("Call Method", function() {
   var array = [1,2,3];
   var function_literal = function() {};
   var function_instance = new Function();
-  var native_function = "foo".replace;
+  var native_function = String.prototype.replace;
 
   it("should exist on non-function objects", function() {
     var call = Object.prototype.call;
