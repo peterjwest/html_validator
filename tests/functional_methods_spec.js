@@ -15,7 +15,7 @@ describe("Each Method", function() {
     describe("when called on an object", function() {
       it("should return an array", function() {
         var object = {};
-        expect(object.call(each, function() { })).toBe();
+        expect(object.call(each, function() { })).toEqual([]);
       });
     });
   

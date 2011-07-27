@@ -929,6 +929,10 @@ jasmine.Env.prototype.equals_ = function(a, b, mismatchKeys, mismatchValues) {
     return (a == b);
   }
 
+  if ((jasmine.isArray_(a) && !jasmine.isArray_(b)) || (!jasmine.isArray_(a) && jasmine.isArray_(b))) {
+    return false;
+  }
+  
   if (typeof a === "object" && typeof b === "object") {
     return this.compareObjects_(a, b, mismatchKeys, mismatchValues);
   }
