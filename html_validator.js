@@ -17,37 +17,35 @@ var variables = {};
     return "<"+name+(attrs.length > 0 ? " "+attrs.join(" ") : "")+">"+elem.innerHTML+"</"+name+">";
   };
 
+  var shifted = function(args) {
+    return Array.prototype.slice.call(args, 1);
+  };
+  
   var each = function(fn) {
     var array = [];
-    for (var i in this) if (this.call(Object.hasOwnProperty, i)) array.push(this.call(fn, this[i], i));
+    for (var i in this) if (this.call(Object.hasOwnProperty, i))
+      array.push(fn.apply(this, [this[i], i].concat(shifted(arguments))));
     return array;
   };
 
   var map = function(fn) {
     var array = [];
-    var slice = Array.prototype.slice;
-    for (var i = 0, obj; i < this.length; i++) {
-      array.push(fn.apply(this, [this[i], i].concat(slice.call(arguments, 1))));
-    }
+    for (var i = 0, obj; i < this.length; i++)
+      array.push(fn.apply(this, [this[i], i].concat(shifted(arguments))));
     return array;
   };
   
-  var mapEach = function(fn) {
-    var array = [];
-    this.call(each, function(item, name) { array.push({}.call(fn, item, name)); });
-    return array;
-  };
-
-  var get = function(item, key, attr) { return item[attr] };
-  var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
-  var values = function() { return this.call(mapEach, function(item) { return item; }); };
-  var keys = function() { return this.call(mapEach, function(item, key) { return key; }); };
-
   var select = function(fn) {
     var array = [];
-    this.call(map, function(item, i) { if (fn.apply(item, arguments)) array.push(item); })
+    var mapping = function(item, i) { if (fn.apply(this, arguments)) array.push(item); };
+    map.apply(this, [mapping].concat(shifted(arguments)));
     return array;
   };
+  
+  var values = function() { return this.call(each, function(item) { return item; }); };
+  var keys = function() { return this.call(each, function(item, key) { return key; }); };
+  var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
+  var get = function(item, key, attr) { return item[attr] };
 
   var merge = function(b) {
     var a = this;
@@ -61,7 +59,7 @@ var variables = {};
     return obj;
   };
 
-  var makeMap = function() {
+  var hash = function() {
     var obj = {};
     this.call(map, function(item, i) { obj[item] = i + 1; });
     return obj;
@@ -137,7 +135,7 @@ var variables = {};
 
   var expandList = function(groups) {
     if (!this.indexOf) return this;
-    var map = this.split(",").call(makeMap);
+    var map = this.split(",").call(hash);
     map.call(each, function(value, name) {
       if (groups[name]) {
         delete map[name];
@@ -355,7 +353,7 @@ var variables = {};
           var tag = this, errors = [], children = (tag.children || []).call(htmlTags);
           sets.call(map, function(set) {
             if (set.tags[tag.name])
-              if (children.call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(makeMap).call(keys).length > 1)
+              if (children.call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(hash).call(keys).length > 1)
                 errors.push({parent: tag.name, child: set.innerTags.call(map, get, "name"), line: tag.line });
           });
           return errors;
@@ -392,7 +390,7 @@ var variables = {};
         required_attributes: function(doctype, doc) {
           var tag = this, attrs = [];
           ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(required, name) {
-            if (!tag.attrs || !tag.attrs.call(map, function(item) { return item.name; }).call(makeMap)[name]) { attrs.push(name); }
+            if (!tag.attrs || !tag.attrs.call(map, function(item) { return item.name; }).call(hash)[name]) { attrs.push(name); }
           });
           if (attrs.length > 0) return [{
             tag: tag.name, 
@@ -421,7 +419,7 @@ var variables = {};
           var tag = this, errors = [];
           sets.call(map, function(set) {
             if (set.tags[tag.name])
-              if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, get, "name").call(makeMap).call(keys).length < 1)
+              if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, get, "name").call(hash).call(keys).length < 1)
                 errors.push({parent: tag, child: set.innerTags, line: tag.line});
           });
           return errors;
@@ -488,7 +486,7 @@ var variables = {};
     var doc = { name: '#root', children: [], all: [], closed: true };
     var html = settings.html, doctype = settings.doctype;
     var index, match, endedTag, lastHtml = html, current = doc;
-    var depth = function(tag) { return current.call(stack).call(map, get, "name").call(makeMap)[tag] - 1; };
+    var depth = function(tag) { return current.call(stack).call(map, get, "name").call(hash)[tag] - 1; };
     var min = function() { return Math.min.apply({}, this); };
     var last = function() { return this[this.length - 1]; };
     doc.all.push(doc);
@@ -691,5 +689,5 @@ var variables = {};
     return validator;
   };
   
-  variables = {each: each, map: map};
+  variables = {each: each, map: map, select: select, keys: keys, values: values};
 })(jQuery);
