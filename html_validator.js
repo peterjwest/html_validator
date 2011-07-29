@@ -689,5 +689,5 @@ var variables = {};
     return validator;
   };
   
-  variables = {each: each, map: map, select: select, keys: keys, values: values};
+  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method};
 })(jQuery);

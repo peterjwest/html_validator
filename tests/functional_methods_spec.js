@@ -295,11 +295,12 @@ describe("Values Method", function() {
 });
 
 describe("Method Method", function() {
-  var values = variables.values;
+  var method = variables.method;
   
   describe("when passed a function", function() {
     it("should run the function in the scope of the first argument", function() {
-
+      var object = {};
+      method(object, "key", function() { expect(this).toBe(object); });
     });
   });
 });
