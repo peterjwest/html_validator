@@ -274,7 +274,6 @@ describe("Select Method", function() {
 
 describe("Keys Method", function() {
   var keys = variables.keys;
-  
   describe("when called on an object", function() {
     it("should return an array of the attribute names of that object", function() {
       expect({}.call(keys)).toEqual([]);
@@ -285,7 +284,6 @@ describe("Keys Method", function() {
 
 describe("Values Method", function() {
   var values = variables.values;
-  
   describe("when called on an object", function() {
     it("should return an array of the attribute values of that object", function() {
       expect({}.call(values)).toEqual([]);
@@ -296,11 +294,40 @@ describe("Values Method", function() {
 
 describe("Method Method", function() {
   var method = variables.method;
-  
   describe("when passed a function", function() {
     it("should run the function in the scope of the first argument", function() {
       var object = {};
       method(object, "key", function() { expect(this).toBe(object); });
+    });
+  });
+});
+
+describe("Is String Method", function() {
+  var isString = variables.isString;
+  describe("when passed a string", function() {
+    it("should return true", function() {
+      var object = {};
+      expect("Test string").isString()).toBe(true); });
+      expect(new String("Another test string")).isString()).toBe(true); });
+    });
+  });
+  describe("when passed a non-string", function() {
+    it("should return false", function() {
+      var object = {};
+      expect(["Some kind of array"]).isString()).toBe(false); });
+      expect(new Object("Passed a string")).isString()).toBe(false); });
+    });
+  });
+});
+
+describe("Merge Method", function() {
+  var merge = variables.merge;
+  describe("when called on an object", function() {
+    var object = {a: 'x', b: 'y', c: 'z'};
+    describe("when passed an empty object", function() {
+      it("should return the first object", function() {
+        expect(object.call(merge, {})).toBe(object);
+      });
     });
   });
 });
