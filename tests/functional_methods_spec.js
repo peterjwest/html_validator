@@ -307,15 +307,15 @@ describe("Is String Method", function() {
   describe("when passed a string", function() {
     it("should return true", function() {
       var object = {};
-      expect("Test string").isString()).toBe(true); });
-      expect(new String("Another test string")).isString()).toBe(true); });
+      expect("Test string".isString()).toBe(true);
+      expect((new String("Another test string")).isString()).toBe(true);
     });
   });
   describe("when passed a non-string", function() {
     it("should return false", function() {
       var object = {};
-      expect(["Some kind of array"]).isString()).toBe(false); });
-      expect(new Object("Passed a string")).isString()).toBe(false); });
+      expect(["Some kind of array"].isString()).toBe(false);
+      expect(new Object("Passed a string").isString()).toBe(false);
     });
   });
 });
@@ -327,6 +327,11 @@ describe("Merge Method", function() {
     describe("when passed an empty object", function() {
       it("should return the first object", function() {
         expect(object.call(merge, {})).toBe(object);
+      });
+    });
+    describe("when called on an object with exclusive parameters", function() {
+      it("should merge those parameters", function() {
+        expect(object.call(merge, {d: 1, e: 2, f: 3})).toEqual({a: 'x', b: 'y', c: 'z', d: 1, e: 2, f: 3});
       });
     });
   });
