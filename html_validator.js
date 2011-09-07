@@ -46,12 +46,18 @@ var variables = {};
   var keys = function() { return this.call(each, function(item, key) { return key; }); };
   var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
   var get = function(item, key, attr) { return item[attr] };
+  var isString = function(item) { return item !== undefined && item !== null && item.substr; };
 
   var merge = function(b) {
     var a = this;
     b.call(each, function(item, name) { a[name] = item; });
     return this;
   };
+  
+  var copyAttrs = function(array, b) { 
+    var a = this;
+    array.call(map, function(item) { a[item] = b[item]; }); 
+  }
 
   var clone = function() {
     var obj = {};
@@ -59,18 +65,29 @@ var variables = {};
     return obj;
   };
 
+  /*
+  var hash = function(fn) {
+    var obj = {};
+    this.call(map, function(item, i) { obj[item] = fn ? this.call(fn, item, i) : true; });
+    return obj;
+  };
+  */
+  
   var hash = function() {
     var obj = {};
     this.call(map, function(item, i) { obj[item] = i + 1; });
     return obj;
   };
   
-  var groupUnique = function() {
+  var englishList = function(conjunction) {
+    var last = this.length - 1;
+    return this.slice(0, last).join(", ")+(last > 0 ? (conjunction || " and ") : "")+(this[last] || "");
+  };
+
+  var removeAdjacentDuplicates = function() {
     var last, different;
     return this.call(select, function(item) { different = last != item; last = item; return different; });
   };
-
-  var isString = function(item) { return item !== undefined && item !== null && item.substr; };
   
   var draw = function(indent) {
     var text = "";
@@ -95,24 +112,9 @@ var variables = {};
     return html;
   };
 
-  var englishList = function(separator) {
-    return [
-      this.slice(0, this.length -1).join(", "),
-      this.length > 1 ? (separator || " and ") : "",
-      this[this.length - 1] || ""
-    ].join("")
-  };
-
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
   var inTag = function() { return "<"+this+">"; };
   var inQuote = function() { return "'"+this+"'"; };
-  var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
-  var combineArrays = function(a,b) { return (a || []).concat(b || []); }
-
-  var addAttributes = function(array, b) { 
-    var a = this;
-    array.call(map, function(item) { a[item] = b[item]; }); 
-  }
 
   var htmlTags = function() { 
     return this.call(select, function(tag) { return tag.name != "#text" && tag.name != "#comment"; }); 
@@ -153,6 +155,7 @@ var variables = {};
     rulesets: {},
     
     extend: function(spec) {
+      var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
       this.groups.call(each, function(groups, type) {
         spec.groups[type] = spec.groups[type] || {};
         groups.call(each, function(group, name) {
@@ -161,13 +164,13 @@ var variables = {};
       });
       spec.attrs = spec.attrs || {};
       this.attrs.call(each, function(attrs, type) {
-        spec.attrs[type] = combineArrays(attrs, spec.attrs[type]);
+        spec.attrs[type] = (attrs || []).concat(spec.attrs[type] || []);
       });
       spec.rulesets = spec.rulesets || {};
       this.rulesets.call(each, function(rulesets, name) {
-        spec.rulesets[name] = combineArrays(rulesets.call(map, method, clone), spec.rulesets[name]);
+        spec.rulesets[name] = (rulesets.call(map, method, clone) || []).concat(spec.rulesets[name] || []);
       });
-      spec.call(addAttributes, ['extend','compute','validate','rules'], this);
+      spec.call(copyAttrs, ['extend', 'compute', 'validate', 'rules'], this);
       return spec;
     },
     
@@ -380,7 +383,7 @@ var variables = {};
               if (error) errors.push({
                 tag: tag.name, 
                 ordered: set.innerTags.call(keys), 
-                child: tag.children.call(map, get, "name").call(groupUnique), 
+                child: tag.children.call(map, get, "name").call(removeAdjacentDuplicates), 
                 line: tag.line
               });
             }
@@ -689,5 +692,5 @@ var variables = {};
     return validator;
   };
   
-  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method};
+  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method, isString: isString};
 })(jQuery);
