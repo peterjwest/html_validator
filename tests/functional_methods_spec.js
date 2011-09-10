@@ -1,3 +1,19 @@
+describe("Shifted Function", function() {
+  var shifted = variables.shifted;
+  
+  describe("When passed an empty array", function() {
+    it("should return an empty array", function() {
+      expect(shifted([])).toEqual([]);
+    });
+  });
+  
+  describe("When passed a non-empty array", function() {
+    it("should return an array with the first item removed", function() {
+      expect(shifted([1,2,3])).toEqual([2,3]);
+    });
+  });
+});
+
 describe("Each Method", function() {
   var each = variables.each;
 
@@ -302,37 +318,96 @@ describe("Method Method", function() {
   });
 });
 
-describe("Is String Method", function() {
-  var isString = variables.isString;
-  describe("when passed a string", function() {
-    it("should return true", function() {
-      var object = {};
-      expect("Test string".isString()).toBe(true);
-      expect((new String("Another test string")).isString()).toBe(true);
+describe("Merge Method", function() {
+  var merge = variables.merge;
+  describe("when called on a non-empty object", function() {
+    var object;
+    beforeEach(function() {
+      object = {a: 'x', b: 'y', c: 'z'};
+    });
+    describe("when passed an empty object", function() {
+      it("should return an object identical to the first object", function() {
+        expect(object.call(merge, {})).toEqual(object);
+      });
+    });
+    describe("when passed an object with exclusive parameters", function() {
+      it("should return an object combining those parameters", function() {
+        expect(object.call(merge, {d: 1, e: 2, f: 3})).toEqual({a: 'x', b: 'y', c: 'z', d: 1, e: 2, f: 3});
+      });
+    });
+    describe("when called on an object with duplicate parameters", function() {
+      it("should return an object combining those parameters, overriding those of the called object", function() {
+        expect(object.call(merge, {b: 1, c: 2, d: 3})).toEqual({a: 'x', b: 1, c: 2, d: 3});
+      });
     });
   });
-  describe("when passed a non-string", function() {
-    it("should return false", function() {
-      var object = {};
-      expect(["Some kind of array"].isString()).toBe(false);
-      expect(new Object("Passed a string").isString()).toBe(false);
+  describe("when called on an empty object", function() {
+    describe("when passed an empty object", function() {
+      it("should return an empty object", function() {
+        expect({}.call(merge, {})).toEqual({});
+      });
+    });
+    describe("when passed a non-emtpy object", function() {
+      var object = {a: 1, b: 2, c: 3};
+      it("should return an object identical to the second object", function() {
+        expect({}.call(merge, object)).toEqual(object);
+      });
     });
   });
 });
 
-describe("Merge Method", function() {
-  var merge = variables.merge;
+describe("Copy Attrs Method", function() {
+  var copyAttrs = variables.copyAttrs;
+
   describe("when called on an object", function() {
-    var object = {a: 'x', b: 'y', c: 'z'};
-    describe("when passed an empty object", function() {
-      it("should return the first object", function() {
-        expect(object.call(merge, {})).toBe(object);
+    var object;
+    beforeEach(function() {
+      object = {a: 'x', b: 'y', c: 'z'};
+    });
+    
+    describe("when passed an empty array and an empty object", function() {
+      it("should return an identical object to the called object", function() {
+        expect(object.call(copyAttrs, [], {})).toEqual(object);
       });
     });
-    describe("when called on an object with exclusive parameters", function() {
-      it("should merge those parameters", function() {
-        expect(object.call(merge, {d: 1, e: 2, f: 3})).toEqual({a: 'x', b: 'y', c: 'z', d: 1, e: 2, f: 3});
+    
+    describe("when passed a non-empty array and an empty object", function() {
+      it("should return an identical object to the called object", function() {
+        expect(object.call(copyAttrs, ["a", "b", "c"], {})).toEqual(object);
       });
+    });
+    
+    describe("when passed an empty array and a non-empty object", function() {
+      it("should return an identical object to the called object", function() {
+        expect(object.call(copyAttrs, [], {a: 1, b: 2, c: 3})).toEqual(object);
+      });
+    });
+    
+    describe("when passed a non-empty array and a non-empty object", function() {
+      it("should copy any attributes of the passed object listed in the passed array to the called object", function() {
+        expect(object.call(copyAttrs, ["a"], {a: 1, b: 2, c: 3})).toEqual({a: 1, b: "y", c: "z"});
+        expect(object.call(copyAttrs, ["b", "c"], {a: 1, b: 2, c: 3})).toEqual({a: "x", b: 2, c: 3});
+        expect(object.call(copyAttrs, ["b", "d"], {a: 1, b: 2, c: 3, d: 4})).toEqual({a: "x", b: 2, c: "z", d: 4});
+      });
+    });
+  });
+});
+
+describe("Clone Method", function() {
+  var clone = variables.clone;
+
+  describe("when called on an empty object", function() {
+    it("should return an empty object", function() {
+      expect({}.call(clone)).toEqual({});
+    });
+  });
+  
+  describe("when called on a non-empty object", function() {
+    var object = {a: [1,2,3], b: 2, c: "3"};
+    it("should return a new object with identical parameters", function() {
+      var cloned = object.call(clone);
+      expect(cloned).toEqual(object);
+      expect(cloned).not.toBe(object);
     });
   });
 });

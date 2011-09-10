@@ -46,7 +46,7 @@ var variables = {};
   var keys = function() { return this.call(each, function(item, key) { return key; }); };
   var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
   var get = function(item, key, attr) { return item[attr] };
-  var isString = function(item) { return item !== undefined && item !== null && item.substr; };
+  //var isString = function(item) { return item !== undefined && item !== null && item.substr; };
 
   var merge = function(b) {
     var a = this;
@@ -552,7 +552,7 @@ var variables = {};
       //Parse attributes and their values
       rest.replace(attr, function(match, name) {
         values = arguments.call([].slice, 2, 5).concat([doctype.tags[tag].attrs.all[name] ? name : ""]);
-        value = values.call(select, isString)[0];
+        value = values.call(select, function(value) { return value != null; })[0];
         attrs.push({ name: name, value: value, escaped: value.replace(/(^|[^\\])"/g, '$1\\\"') });
       });
       var element = {
@@ -692,5 +692,5 @@ var variables = {};
     return validator;
   };
   
-  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method, isString: isString};
+  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method, merge: merge, shifted: shifted, copyAttrs: copyAttrs, clone: clone};
 })(jQuery);
