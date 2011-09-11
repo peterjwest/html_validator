@@ -409,7 +409,14 @@ describe("Copy Attrs Method", function() {
 
 describe("Clone Method", function() {
   var clone = variables.clone;
-
+  
+  describe("when called on an object", function() {
+    var object = {a: 1, b: 2, c: 3};
+    it("should return a new object", function() {
+      expect(object.call(clone)).not.toBe(object);
+    });
+  });
+  
   describe("when called on an empty object", function() {
     it("should return an empty object", function() {
       expect({}.call(clone)).toEqual({});
@@ -417,11 +424,21 @@ describe("Clone Method", function() {
   });
   
   describe("when called on a non-empty object", function() {
-    var object = {a: [1,2,3], b: 2, c: "3"};
-    it("should return a new object with identical parameters", function() {
-      var cloned = object.call(clone);
-      expect(cloned).toEqual(object);
-      expect(cloned).not.toBe(object);
+    var object;
+    beforeEach(function() {
+      object = {a: [1,2,3], b: 2, c: "3"};
+    });
+    
+    describe("when passed no extra parameters", function() {
+      it("should return a new object with identical attributes to the called object", function() {
+        expect(object.call(clone)).toEqual(object);
+      });
+    });
+    
+    describe("when passed an array as an extra parameter", function() {
+      it("should return a new object with identical attributes to the called object, but only including those listed in the array", function() {
+        expect(object.call(clone, ["a", "c"])).toEqual({a: [1,2,3], c: "3"});
+      });
     });
   });
 });

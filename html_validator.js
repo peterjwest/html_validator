@@ -60,10 +60,12 @@ var variables = {};
     return a;
   }
 
-  var clone = function() {
-    var obj = {};
-    this.call(each, function(item, name) { obj[name] = item; });
-    return obj;
+  var clone = function(attrs) {
+    attrs = attrs || this.call(keys);
+    var clone = {};
+    var original = this;
+    attrs.call(map, function(attr) { clone[attr] = original[attr]; });
+    return clone;
   };
 
   /*
