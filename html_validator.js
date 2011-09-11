@@ -53,12 +53,6 @@ var variables = {};
     b.call(each, function(item, name) { a[name] = item; });
     return this;
   };
-  
-  var copyAttrs = function(array, b) { 
-    var a = this;
-    array.call(map, function(item) { a[item] = b[item]; }); 
-    return a;
-  }
 
   var clone = function(attrs) {
     attrs = attrs || this.call(keys);
@@ -173,8 +167,7 @@ var variables = {};
       this.rulesets.call(each, function(rulesets, name) {
         spec.rulesets[name] = (rulesets.call(map, method, clone) || []).concat(spec.rulesets[name] || []);
       });
-      spec.call(copyAttrs, ['extend', 'compute', 'validate', 'rules'], this);
-      return spec;
+      return spec.call(merge, this.call(clone, ['extend', 'compute', 'validate', 'rules']));
     },
     
     compute: function() {
@@ -695,5 +688,5 @@ var variables = {};
     return validator;
   };
   
-  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method, merge: merge, shifted: shifted, copyAttrs: copyAttrs, clone: clone};
+  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method, merge: merge, shifted: shifted, clone: clone};
 })(jQuery);
