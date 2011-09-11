@@ -365,29 +365,43 @@ describe("Copy Attrs Method", function() {
       object = {a: 'x', b: 'y', c: 'z'};
     });
     
-    describe("when passed an empty array and an empty object", function() {
-      it("should return an identical object to the called object", function() {
-        expect(object.call(copyAttrs, [], {})).toEqual(object);
+    describe("when passed an empty array", function() {
+      describe("when passed an empty object", function() {
+        it("should return an identical object to the called object", function() {
+          expect(object.call(copyAttrs, [], {})).toEqual(object);
+        });
+      });
+      
+      describe("when passed a non-empty object", function() {
+        it("should return an identical object to the called object", function() {
+          expect(object.call(copyAttrs, [], {a: 1, b: 2, c: 3})).toEqual(object);
+        });
       });
     });
     
-    describe("when passed a non-empty array and an empty object", function() {
-      it("should return an identical object to the called object", function() {
-        expect(object.call(copyAttrs, ["a", "b", "c"], {})).toEqual(object);
+    describe("when passed a non-empty array", function() {
+      describe("when passed an empty object", function() {
+        it("should return an identical object to the called object", function() {
+          expect(object.call(copyAttrs, ["a", "b", "c"], {})).toEqual(object);
+        });
       });
-    });
-    
-    describe("when passed an empty array and a non-empty object", function() {
-      it("should return an identical object to the called object", function() {
-        expect(object.call(copyAttrs, [], {a: 1, b: 2, c: 3})).toEqual(object);
-      });
-    });
-    
-    describe("when passed a non-empty array and a non-empty object", function() {
-      it("should copy any attributes of the passed object listed in the passed array to the called object", function() {
-        expect(object.call(copyAttrs, ["a"], {a: 1, b: 2, c: 3})).toEqual({a: 1, b: "y", c: "z"});
-        expect(object.call(copyAttrs, ["b", "c"], {a: 1, b: 2, c: 3})).toEqual({a: "x", b: 2, c: 3});
-        expect(object.call(copyAttrs, ["b", "d"], {a: 1, b: 2, c: 3, d: 4})).toEqual({a: "x", b: 2, c: "z", d: 4});
+      
+      describe("when passed a non-empty object", function() {
+        describe("when the array only contains items which are attributes on the passed object", function() {
+          it("should copy those attributes from the passed object to the called object", function() {
+            expect(object.call(copyAttrs, ["a"], {a: 1, b: 2, c: 3})).toEqual({a: 1, b: "y", c: "z"});
+          });
+        });
+        describe("when the array only contains items which are not attributes on the passed object", function() {
+          it("should return an identical object to the called object", function() {
+            expect(object.call(copyAttrs, ["d", "e"], {a: 1, b: 2, c: 3})).toEqual(object);
+          });
+        });
+        describe("when the array contains some items which are attributes on the passed object", function() {
+          it("should copy the attributes listed in the array from the passed object to the called object", function() {
+            expect(object.call(copyAttrs, ["b", "d", "f"], {a: 1, b: 2, c: 3, d: 4})).toEqual({a: "x", b: 2, c: "z", d: 4});
+          });
+        });
       });
     });
   });

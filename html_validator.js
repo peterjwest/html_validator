@@ -57,6 +57,7 @@ var variables = {};
   var copyAttrs = function(array, b) { 
     var a = this;
     array.call(map, function(item) { a[item] = b[item]; }); 
+    return a;
   }
 
   var clone = function() {
