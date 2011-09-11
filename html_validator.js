@@ -2,10 +2,11 @@
 //Original parser By John Resig (ejohn.org) http://ejohn.org/blog/pure-javascript-html-parser/
 //and Erik Arvidsson (Mozilla Public License) http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
-//Oh no! I'm changing the Object prototype! This is the only prototype change I will make
-//and allows functions to be called as methods. Read more here: 
+//Oh no! I'm changing the Object prototype! Don't worry, this is the only prototype change I use.
+//It allows functions to be called as methods. Read more here: 
 //http://www.extended-gameplay.com/#/title+Flipped_call()_method_in_Javascript/
 Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.slice.call(arguments, 1)); };
+
 var variables = {};
 
 (function($) {
@@ -45,8 +46,7 @@ var variables = {};
   var values = function() { return this.call(each, function(item) { return item; }); };
   var keys = function() { return this.call(each, function(item, key) { return key; }); };
   var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
-  var get = function(item, key, attr) { return item[attr] };
-  //var isString = function(item) { return item !== undefined && item !== null && item.substr; };
+  var get = function(item, key, attr) { return item[attr] };                
 
   var merge = function(b) {
     var a = this;
