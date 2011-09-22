@@ -62,18 +62,20 @@ var variables = {};
     return clone;
   };
 
-  /*
-  var hash = function(fn) {
-    var obj = {};
-    this.call(map, function(item, i) { obj[item] = fn ? this.call(fn, item, i) : true; });
-    return obj;
-  };
-  */
-  
   var hash = function() {
     var obj = {};
     this.call(map, function(item, i) { obj[item] = i + 1; });
     return obj;
+  };
+  
+  var hash = function(fn) {
+    var obj = {};
+    this.call(map, function(item, i) { obj[item] = fn(item, i); });
+    return obj;
+  };
+  
+  var numbered = function(item, i) {
+    return i + 1;
   };
   
   var englishList = function(conjunction) {
@@ -134,7 +136,7 @@ var variables = {};
 
   var expandList = function(groups) {
     if (!this.indexOf) return this;
-    var map = this.split(",").call(hash);
+    var map = this.split(",").call(hash, numbered);
     map.call(each, function(value, name) {
       if (groups[name]) {
         delete map[name];
@@ -352,7 +354,7 @@ var variables = {};
           var tag = this, errors = [], children = (tag.children || []).call(htmlTags);
           sets.call(map, function(set) {
             if (set.tags[tag.name])
-              if (children.call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(hash).call(keys).length > 1)
+              if (children.call(select, function(child) { return set.innerTags[child.name]; }).call(map, function(item) { return item.name; }).call(hash, numbered).call(keys).length > 1)
                 errors.push({parent: tag.name, child: set.innerTags.call(map, get, "name"), line: tag.line });
           });
           return errors;
@@ -389,7 +391,7 @@ var variables = {};
         required_attributes: function(doctype, doc) {
           var tag = this, attrs = [];
           ((doctype.tags[tag.name] && doctype.tags[tag.name].attrs.required) || {}).call(each, function(required, name) {
-            if (!tag.attrs || !tag.attrs.call(map, function(item) { return item.name; }).call(hash)[name]) { attrs.push(name); }
+            if (!tag.attrs || !tag.attrs.call(map, function(item) { return item.name; }).call(hash, numbered)[name]) { attrs.push(name); }
           });
           if (attrs.length > 0) return [{
             tag: tag.name, 
@@ -418,7 +420,7 @@ var variables = {};
           var tag = this, errors = [];
           sets.call(map, function(set) {
             if (set.tags[tag.name])
-              if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, get, "name").call(hash).call(keys).length < 1)
+              if ((tag.children || []).call(select, function(child) { return set.innerTags[child.name]; }).call(map, get, "name").call(hash, numbered).call(keys).length < 1)
                 errors.push({parent: tag, child: set.innerTags, line: tag.line});
           });
           return errors;
@@ -485,7 +487,7 @@ var variables = {};
     var doc = { name: '#root', children: [], all: [], closed: true };
     var html = settings.html, doctype = settings.doctype;
     var index, match, endedTag, lastHtml = html, current = doc;
-    var depth = function(tag) { return current.call(stack).call(map, get, "name").call(hash)[tag] - 1; };
+    var depth = function(tag) { return current.call(stack).call(map, get, "name").call(hash, numbered)[tag] - 1; };
     var min = function() { return Math.min.apply({}, this); };
     var last = function() { return this[this.length - 1]; };
     doc.all.push(doc);
