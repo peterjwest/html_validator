@@ -290,6 +290,7 @@ describe("Select Method", function() {
 
 describe("Keys Method", function() {
   var keys = variables.keys;
+  
   describe("when called on an object", function() {
     it("should return an array of the attribute names of that object", function() {
       expect({}.call(keys)).toEqual([]);
@@ -300,6 +301,7 @@ describe("Keys Method", function() {
 
 describe("Values Method", function() {
   var values = variables.values;
+  
   describe("when called on an object", function() {
     it("should return an array of the attribute values of that object", function() {
       expect({}.call(values)).toEqual([]);
@@ -310,6 +312,7 @@ describe("Values Method", function() {
 
 describe("Method Method", function() {
   var method = variables.method;
+  
   describe("when passed a function", function() {
     it("should run the function in the scope of the first argument", function() {
       var object = {};
@@ -320,33 +323,39 @@ describe("Method Method", function() {
 
 describe("Merge Method", function() {
   var merge = variables.merge;
+  
   describe("when called on a non-empty object", function() {
     var object;
     beforeEach(function() {
       object = {a: 'x', b: 'y', c: 'z'};
     });
+    
     describe("when passed an empty object", function() {
       it("should return an object identical to the first object", function() {
         expect(object.call(merge, {})).toEqual(object);
       });
     });
+    
     describe("when passed an object with exclusive parameters", function() {
       it("should return an object combining those parameters", function() {
         expect(object.call(merge, {d: 1, e: 2, f: 3})).toEqual({a: 'x', b: 'y', c: 'z', d: 1, e: 2, f: 3});
       });
     });
+    
     describe("when called on an object with duplicate parameters", function() {
       it("should return an object combining those parameters, overriding those of the called object", function() {
         expect(object.call(merge, {b: 1, c: 2, d: 3})).toEqual({a: 'x', b: 1, c: 2, d: 3});
       });
     });
   });
+  
   describe("when called on an empty object", function() {
     describe("when passed an empty object", function() {
       it("should return an empty object", function() {
         expect({}.call(merge, {})).toEqual({});
       });
     });
+    
     describe("when passed a non-emtpy object", function() {
       var object = {a: 1, b: 2, c: 3};
       it("should return an object identical to the second object", function() {
@@ -384,10 +393,119 @@ describe("Clone Method", function() {
       });
     });
     
+    describe("when passed an empty array as an extra parameter", function() {
+      it("should return an empty object", function() {
+        expect(object.call(clone, [])).toEqual({});
+      });
+    });
+    
     describe("when passed an array as an extra parameter", function() {
       it("should return a new object with identical attributes to the called object, excluding attributes not listed in the array", function() {
         expect(object.call(clone, ["a", "c"])).toEqual({a: [1,2,3], c: "3"});
       });
     });
   });
+});
+
+describe("Hash method", function() {
+  var hash = variables.hash;
+  
+  describe("when called on an empty array", function() {    
+    it("should return an empty object", function() {
+      expect([].call(hash)).toEqual({});
+    });
+  });
+  
+  describe("when called on a non-empty array", function() {
+    var object;
+    beforeEach(function() {
+      object = ["a", "b", "c"];
+    });
+    
+    describe("when passed no parameters", function() {
+      it("should return an object with attributes named for each item in the array", function() {
+        expect(object.call(hash)).toEqual({a: true, b: true, c: true});
+      });
+    });
+    
+    describe("when passed a function as a parameter", function() {
+      it("should call that function for each item in the array", function() {
+        var i = 0;
+        object.call(hash, function() { i++; });
+        expect(i).toEqual(3);
+      });
+      
+      it("should pass the array item and its index to the function", function() {
+        var args = [];
+        object.call(hash, function(a, b) { args.push([a, b]); });
+        expect(args).toEqual([["a", 0], ["b", 1], ["c", 2]]);
+      });
+      
+      it("should assign the value returned to each attribute in the returned object", function() {
+        expect(object.call(hash, function(a, b) { return a + (b + 1); })).toEqual({a: "a1", b: "b2", c: "c3"});
+      });
+    });
+  });
+});
+
+describe("Numbered function", function() {
+  var numbered = variables.numbered;
+  
+  describe("when passed a number as its second parameter", function() {
+    it("should return that number plus one", function() {
+      expect(numbered("item", 3)).toEqual(4);
+    });
+  });
+});
+
+describe("English List method", function() {
+  var englishList = variables.englishList;
+  
+  describe("when called on an array of strings", function() {
+    describe("when the array has length one", function() {
+      it("should return the item", function() {
+        expect(["foo"].call(englishList)).toEqual("foo");
+      });
+    });
+    
+    describe("when the array has length two", function() {
+      it("should return the items joined with 'and'", function() {
+        expect(["foo", "bar"].call(englishList)).toEqual("foo and bar");
+      });
+    });
+    
+    describe("when the array has length more than two", function() {
+      it("should return the items joined with a comma, and the last item joined with 'and'", function() {
+        expect(["foo", "bar", "zim"].call(englishList)).toEqual("foo, bar and zim");
+        expect(["foo", "bar", "zim", "gir"].call(englishList)).toEqual("foo, bar, zim and gir");
+      });
+    });
+  });
+});
+
+describe("Group Unique Method", function() {
+});
+
+describe("Draw Method", function() {
+});
+
+describe("Reassemble Method", function() {
+});
+
+describe("Stack Method", function() {
+});
+
+describe("In Tag Method", function() {
+});
+
+describe("In Quote Method", function() {
+});
+
+describe("HTML Tags Method", function() {
+});
+
+describe("Computed Descendents Method", function() {
+});
+
+describe("Expand List Method", function() {
 });

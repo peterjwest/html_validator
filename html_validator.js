@@ -70,7 +70,7 @@ var variables = {};
   
   var hash = function(fn) {
     var obj = {};
-    this.call(map, function(item, i) { obj[item] = fn(item, i); });
+    this.call(map, function(item, i) { obj[item] = fn ? fn(item, i) : true; });
     return obj;
   };
   
@@ -83,7 +83,7 @@ var variables = {};
     return this.slice(0, last).join(", ")+(last > 0 ? (conjunction || " and ") : "")+(this[last] || "");
   };
 
-  var removeAdjacentDuplicates = function() {
+  var groupUnique = function() {
     var last, different;
     return this.call(select, function(item) { different = last != item; last = item; return different; });
   };
@@ -381,7 +381,7 @@ var variables = {};
               if (error) errors.push({
                 tag: tag.name, 
                 ordered: set.innerTags.call(keys), 
-                child: tag.children.call(map, get, "name").call(removeAdjacentDuplicates), 
+                child: tag.children.call(map, get, "name").call(groupUnique), 
                 line: tag.line
               });
             }
@@ -690,5 +690,10 @@ var variables = {};
     return validator;
   };
   
-  variables = {each: each, map: map, select: select, keys: keys, values: values, method: method, merge: merge, shifted: shifted, clone: clone};
+  variables = {
+    each: each, map: map, select: select, keys: keys, values: values, method: method, 
+    merge: merge, shifted: shifted, clone: clone, hash: hash, numbered: numbered, englishList: englishList,
+    groupUnique: groupUnique, draw: draw, reassemble: reassemble, stack:stack, 
+    inTag: inTag, inQuote: inQuote, htmlTags: htmlTags, computedDescendents: computedDescendents, expandList: expandList
+  };
 })(jQuery);
