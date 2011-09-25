@@ -90,7 +90,7 @@ var variables = {};
   
   var draw = function(indent) {
     var text = "";
-    if (this.unopened) text += (indent||"")+"</"+this.name+">\n";
+    if (this.unopened) text += (indent||"") + "</"+this.name+">\n";
     else {
       text += (indent||"")+(this.implicit ? "{<"+this.name+">}" : "<"+this.name+">")+"\n";
       if (this.children) {
@@ -112,10 +112,8 @@ var variables = {};
   };
 
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
-  var inTag = function() { return "<"+this+">"; };
-  var inQuote = function() { return "'"+this+"'"; };
 
-  var htmlTags = function() { 
+  var htmlTags = function() {
     return this.call(select, function(tag) { return tag.name != "#text" && tag.name != "#comment"; }); 
   };
 
@@ -245,6 +243,7 @@ var variables = {};
     validate: function(doc) {
       var doctype = this, errors = [], current;
       var matchTag = /(<)(([^<>\s]+)[^<>]*)>/g, matchAttr = /(\[)(([^\[\]\s]+)[^\[\]]*)\]/g;
+      var inTag = function() { return "<"+this+">"; };
       var insertItem = function(match, type, options, name, position, string) {
         if (current[name] === undefined) return match;
         var list = current[name].join;
@@ -300,6 +299,7 @@ var variables = {};
         },
         allowed_attribute_values: function(doctype, doc) {
           var tag = this, errors = [], format, message, formatName;
+          var inQuote = function() { return "'"+this+"'"; };
           (this.attrs || []).call(map, function(attr) {
             if (!doctype.tags[tag.name]) return;
             var values = (doctype.tags[tag.name].attrs.all[attr.name] || "");
@@ -694,6 +694,6 @@ var variables = {};
     each: each, map: map, select: select, keys: keys, values: values, method: method, 
     merge: merge, shifted: shifted, clone: clone, hash: hash, numbered: numbered, englishList: englishList,
     groupUnique: groupUnique, draw: draw, reassemble: reassemble, stack:stack, 
-    inTag: inTag, inQuote: inQuote, htmlTags: htmlTags, computedDescendents: computedDescendents, expandList: expandList
+    htmlTags: htmlTags, computedDescendents: computedDescendents, expandList: expandList
   };
 })(jQuery);
