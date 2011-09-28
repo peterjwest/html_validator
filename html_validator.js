@@ -104,12 +104,11 @@ var variables = {};
   };
 
   var reassemble = function() {
-    var html = "";
-    if (this.html) html += this.html;
-    if (this.children) html += this.children.call(map, function(child) { return child.call(reassemble); }).join("");
-    if (this.endHtml) html += this.endHtml;
-    return html;
+    var innerHtml = (this.children || []).call(map, method, reassemble).join("");
+    return (this.html || "")+innerHtml+(this.endHtml || "");
   };
+  
+  // html, children, endHtml
 
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
 
@@ -692,8 +691,8 @@ var variables = {};
   
   variables = {
     each: each, map: map, select: select, keys: keys, values: values, method: method, 
-    merge: merge, shifted: shifted, clone: clone, hash: hash, numbered: numbered, englishList: englishList,
-    groupUnique: groupUnique, draw: draw, reassemble: reassemble, stack:stack, 
+    merge: merge, shifted: shifted, clone: clone, hash: hash, numbered: numbered, groupUnique: groupUnique, 
+    englishList: englishList, reassemble: reassemble, stack: stack, 
     htmlTags: htmlTags, computedDescendents: computedDescendents, expandList: expandList
   };
 })(jQuery);

@@ -25,10 +25,41 @@ describe("Stack Method", function() {
   });
 });
 
-describe("Draw Method", function() {
-});
-
 describe("Reassemble Method", function() {
+  var reassemble = variables.reassemble;
+  describe("when passed an object with no children attribute", function() {
+    var object;
+    it("should return the html and endHtml attributes joined, if they exist", function() {
+      object = {html: "<div>", endHtml = "</div>"};
+      expect(object.call(reassemble)).toEqual(object.html+object.endHtml);
+      object = {html: "<img>"};
+      expect(object.call(reassemble)).toEqual(object.html);
+      object = {endHtml: "</div>"};
+      expect(object.call(reassemble)).toEqual(object.endHtml);
+    });
+  });
+  
+  describe("when passed an object with a children attribute which is an empty array", function() {
+    it("should return the html and endHtml attributes joined, if they exist", function() {
+      var object = {html: "<div>", endHtml: "</div>", children: []};
+      expect(object.call(reassemble)).toEqual(object.html+object.endHtml);
+    });
+  });
+  
+  describe("when passed an object with a children attribute which is a non-empty array", function() {
+    it("should return the html and endHtml attributes wrapped around reassemble called on each item in the array", function() {
+      var object = {
+        html: "<div>", 
+        endHtml: "</div>", 
+        children: [
+          {html: "<img>"}, 
+          {html: "<p>", endHtml: "</p>", children: [{html: "<br>"}]}
+        ]
+      };
+      var expected = object.html+object.children[0].call(reassemble)+object.children[1].call(reassemble)+object.endHtml;
+      expect(object.call(reassemble)).toEqual(expected);
+    });
+  });
 });
 
 describe("HTML Tags Method", function() {
