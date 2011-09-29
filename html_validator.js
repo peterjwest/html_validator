@@ -108,8 +108,6 @@ var variables = {};
     return (this.html || "")+innerHtml+(this.endHtml || "");
   };
   
-  // html, children, endHtml
-
   var stack = function() { return this.parent ? this.parent.call(stack).concat([this]) : [this]; };
 
   var htmlTags = function() {

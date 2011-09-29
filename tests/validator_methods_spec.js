@@ -30,7 +30,7 @@ describe("Reassemble Method", function() {
   describe("when passed an object with no children attribute", function() {
     var object;
     it("should return the html and endHtml attributes joined, if they exist", function() {
-      object = {html: "<div>", endHtml = "</div>"};
+      object = {html: "<div>", endHtml: "</div>"};
       expect(object.call(reassemble)).toEqual(object.html+object.endHtml);
       object = {html: "<img>"};
       expect(object.call(reassemble)).toEqual(object.html);
@@ -47,7 +47,7 @@ describe("Reassemble Method", function() {
   });
   
   describe("when passed an object with a children attribute which is a non-empty array", function() {
-    it("should return the html and endHtml attributes wrapped around reassemble called on each item in the array", function() {
+    it("should return the html and endHtml attributes wrapping reassemble called on each item in the array joined", function() {
       var object = {
         html: "<div>", 
         endHtml: "</div>", 
@@ -63,6 +63,18 @@ describe("Reassemble Method", function() {
 });
 
 describe("HTML Tags Method", function() {
+  var htmlTags = variables.htmlTags;
+  describe("when passed an empty array", function() {
+    it("should return an empty array", function() {
+      expect([].call(htmlTags)).toEqual([]);
+    });
+  });
+  describe("when passed an array of objects", function() {
+    it("should return an array excluding items with a 'name' attribute of '#text' or '#comment'", function() {
+      var array = [{name:"div"}, {name:"#text"}, {name:"#comment"}, {name:"img"}];
+      expect(array.call(htmlTags)).toEqual([array[0], array[3]]);
+    });
+  });
 });
 
 describe("Computed Descendents Method", function() {
