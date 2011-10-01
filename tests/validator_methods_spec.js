@@ -1,3 +1,45 @@
+
+describe("English List method", function() {
+  var englishList = variables.englishList;
+  
+  describe("when called on an array of strings", function() {
+    describe("when the array has length one", function() {
+      it("should return the item", function() {
+        expect(["foo"].call(englishList)).toEqual("foo");
+      });
+    });
+    
+    describe("when the array has length two", function() {
+      it("should return the items joined with 'and'", function() {
+        expect(["foo", "bar"].call(englishList)).toEqual("foo and bar");
+      });
+    });
+    
+    describe("when the array has length more than two", function() {
+      it("should return the items joined with a comma, and the last item joined with 'and'", function() {
+        expect(["foo", "bar", "zim"].call(englishList)).toEqual("foo, bar and zim");
+        expect(["foo", "bar", "zim", "gir"].call(englishList)).toEqual("foo, bar, zim and gir");
+      });
+    });
+  });
+});
+
+describe("Group Unique Method", function() {
+  var groupUnique = variables.groupUnique;
+
+  describe("when called on an empty array", function() {
+    it("should return an empty array", function() {
+      expect([].call(groupUnique)).toEqual([]);
+    });
+  });
+  describe("when called on a non-empty array", function() {
+    it("should return an array with identical adjacent elements removed", function() {
+      expect(["foo", "foo", "bar"].call(groupUnique)).toEqual(["foo", "bar"]);
+      expect(["foo", "bar", "bar", "bar", "zim", "bar"].call(groupUnique)).toEqual(["foo", "bar", "zim", "bar"]);
+    });
+  });
+});
+
 describe("Stack Method", function() {
   var stack = variables.stack;
   describe("when called on an object with no parent attribute", function() {

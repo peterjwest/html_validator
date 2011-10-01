@@ -624,9 +624,7 @@ var variables = {};
   };
   
   variables = {
-    each: each, map: map, select: select, keys: keys, values: values, method: method, 
-    merge: merge, shifted: shifted, clone: clone, hash: hash, numbered: numbered, groupUnique: groupUnique, 
-    englishList: englishList, reassemble: reassemble, stack: stack, 
+    groupUnique: groupUnique, englishList: englishList, reassemble: reassemble, stack: stack, 
     htmlTags: htmlTags, computedDescendents: computedDescendents, expandList: expandList, combineLists: combineLists
   };
 })(jQuery);

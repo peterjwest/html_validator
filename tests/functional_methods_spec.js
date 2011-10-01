@@ -1,6 +1,4 @@
-describe("Shifted Function", function() {
-  var shifted = variables.shifted;
-  
+describe("Shifted Function", function() {  
   describe("When passed an empty array", function() {
     it("should return an empty array", function() {
       expect(shifted([])).toEqual([]);
@@ -15,8 +13,6 @@ describe("Shifted Function", function() {
 });
 
 describe("Each Method", function() {
-  var each = variables.each;
-
   describe("when not passed a function", function() {
     describe("when called on an non-empty object", function() {
       var object = {foo: 'bar', zim: 'gir'};
@@ -92,8 +88,6 @@ describe("Each Method", function() {
 });
 
 describe("Map Method", function() {
-  var map = variables.map;
-  
   describe("when not passed a function", function() {
     describe("when called on an non-empty array", function() {
       var array = ['bar', 'gir'];
@@ -183,8 +177,6 @@ describe("Map Method", function() {
 });
 
 describe("Select Method", function() {
-  var select = variables.select;
-  
   describe("when not passed a function", function() {
     describe("when called on an non-empty array", function() {
       var array = ['bar', 'gir'];
@@ -289,8 +281,6 @@ describe("Select Method", function() {
 });
 
 describe("Keys Method", function() {
-  var keys = variables.keys;
-  
   describe("when called on an object", function() {
     it("should return an array of the attribute names of that object", function() {
       expect({}.call(keys)).toEqual([]);
@@ -300,8 +290,6 @@ describe("Keys Method", function() {
 });
 
 describe("Values Method", function() {
-  var values = variables.values;
-  
   describe("when called on an object", function() {
     it("should return an array of the attribute values of that object", function() {
       expect({}.call(values)).toEqual([]);
@@ -311,8 +299,6 @@ describe("Values Method", function() {
 });
 
 describe("Method Method", function() {
-  var method = variables.method;
-  
   describe("when passed a function", function() {
     it("should run the function in the scope of the first argument", function() {
       var object = {};
@@ -322,8 +308,6 @@ describe("Method Method", function() {
 });
 
 describe("Merge Method", function() {
-  var merge = variables.merge;
-  
   describe("when called on a non-empty object", function() {
     var object;
     beforeEach(function() {
@@ -366,8 +350,6 @@ describe("Merge Method", function() {
 });
 
 describe("Clone Method", function() {
-  var clone = variables.clone;
-  
   describe("when called on an object", function() {
     var object = {a: 1, b: 2, c: 3};
     it("should return a new object", function() {
@@ -408,8 +390,6 @@ describe("Clone Method", function() {
 });
 
 describe("Hash method", function() {
-  var hash = variables.hash;
-  
   describe("when called on an empty array", function() {    
     it("should return an empty object", function() {
       expect([].call(hash)).toEqual({});
@@ -449,52 +429,9 @@ describe("Hash method", function() {
 });
 
 describe("Numbered function", function() {
-  var numbered = variables.numbered;
-  
   describe("when passed a number as its second parameter", function() {
     it("should return that number plus one", function() {
       expect(numbered("item", 3)).toEqual(4);
-    });
-  });
-});
-
-describe("English List method", function() {
-  var englishList = variables.englishList;
-  
-  describe("when called on an array of strings", function() {
-    describe("when the array has length one", function() {
-      it("should return the item", function() {
-        expect(["foo"].call(englishList)).toEqual("foo");
-      });
-    });
-    
-    describe("when the array has length two", function() {
-      it("should return the items joined with 'and'", function() {
-        expect(["foo", "bar"].call(englishList)).toEqual("foo and bar");
-      });
-    });
-    
-    describe("when the array has length more than two", function() {
-      it("should return the items joined with a comma, and the last item joined with 'and'", function() {
-        expect(["foo", "bar", "zim"].call(englishList)).toEqual("foo, bar and zim");
-        expect(["foo", "bar", "zim", "gir"].call(englishList)).toEqual("foo, bar, zim and gir");
-      });
-    });
-  });
-});
-
-describe("Group Unique Method", function() {
-  var groupUnique = variables.groupUnique;
-
-  describe("when called on an empty array", function() {
-    it("should return an empty array", function() {
-      expect([].call(groupUnique)).toEqual([]);
-    });
-  });
-  describe("when called on a non-empty array", function() {
-    it("should return an array with identical adjacent elements removed", function() {
-      expect(["foo", "foo", "bar"].call(groupUnique)).toEqual(["foo", "bar"]);
-      expect(["foo", "bar", "bar", "bar", "zim", "bar"].call(groupUnique)).toEqual(["foo", "bar", "zim", "bar"]);
     });
   });
 });
