@@ -1,6 +1,6 @@
 
 describe("English List method", function() {
-  var englishList = variables.englishList;
+  var englishList = $.htmlValidator.fn.englishList;
   
   describe("when called on an array of strings", function() {
     describe("when the array has length one", function() {
@@ -25,7 +25,7 @@ describe("English List method", function() {
 });
 
 describe("Group Unique Method", function() {
-  var groupUnique = variables.groupUnique;
+  var groupUnique = $.htmlValidator.fn.groupUnique;
 
   describe("when called on an empty array", function() {
     it("should return an empty array", function() {
@@ -41,7 +41,7 @@ describe("Group Unique Method", function() {
 });
 
 describe("Stack Method", function() {
-  var stack = variables.stack;
+  var stack = $.htmlValidator.fn.stack;
   describe("when called on an object with no parent attribute", function() {
     var object = {a: 1};
     it("should return an array with that object", function() {
@@ -68,7 +68,7 @@ describe("Stack Method", function() {
 });
 
 describe("Reassemble Method", function() {
-  var reassemble = variables.reassemble;
+  var reassemble = $.htmlValidator.fn.reassemble;
   describe("when passed an object with no children attribute", function() {
     var object;
     it("should return the html and endHtml attributes joined, if they exist", function() {
@@ -105,7 +105,7 @@ describe("Reassemble Method", function() {
 });
 
 describe("HTML Tags Method", function() {
-  var htmlTags = variables.htmlTags;
+  var htmlTags = $.htmlValidator.fn.htmlTags;
   describe("when passed an empty array", function() {
     it("should return an empty array", function() {
       expect([].call(htmlTags)).toEqual([]);
@@ -120,8 +120,8 @@ describe("HTML Tags Method", function() {
 });
 
 describe("Computed Descendents Method", function() {
-  var stack = variables.stack;
-  var computedDescendents = variables.computedDescendents;
+  var stack = $.htmlValidator.fn.stack;
+  var computedDescendents = $.htmlValidator.fn.computedDescendents;
   describe("when called on an object", function() {
     var object;
     describe("when passed a hash of items each with a hash of allowed_descendents and banned_descendents", function() {
@@ -162,7 +162,7 @@ describe("Expand List Method", function() {
 });
 
 describe("Combine Lists Function", function() { 
-  var combineLists = variables.combineLists;
+  var combineLists = $.htmlValidator.fn.combineLists;
   describe("when passed two strings", function() {
     describe("when the second string begins with +", function() {
       it("should return the two strings with the + removed, joined with a comma", function() {

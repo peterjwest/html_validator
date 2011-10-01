@@ -82,7 +82,7 @@
   };
 
   $.htmlValidator = {
-    functions: fn,
+    fn: fn,
     doctypes: [],
     
     doctype: function(name) {
