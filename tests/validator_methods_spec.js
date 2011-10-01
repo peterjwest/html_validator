@@ -78,7 +78,59 @@ describe("HTML Tags Method", function() {
 });
 
 describe("Computed Descendents Method", function() {
+  var stack = variables.stack;
+  var computedDescendents = variables.computedDescendents;
+  describe("when called on an object", function() {
+    var object;
+    describe("when passed a hash of items each with a hash of allowed_descendents and banned_descendents", function() {
+      var hash = {
+        a: {
+          allowed_descendents: {a: true},
+          banned_descendents: {}
+        },
+        b: {
+          allowed_descendents: {c: true, d: true},
+          banned_descendents: {a: true}
+        },
+        c: {
+          allowed_descendents: {a: true, b: true, c: true, e: true},
+          banned_descendents: {c: true}
+        }
+      };
+      
+      it("should use the stack of the object to collect a hash of allowed_descendents excluding banned_descendents", function() {
+        object = {name: 'a'};
+        expect(object.call(computedDescendents, hash)).toEqual({a: true});
+        
+        object = {name: 'c'};
+        expect(object.call(computedDescendents, hash)).toEqual({a: true, b: true, e: true});
+        
+        object = {name: 'a', parent: {name: 'b'}};
+        expect(object.call(computedDescendents, hash)).toEqual({c: true, d: true});
+        
+        object = {name: 'a', parent: {name: 'b', parent: {name: 'c'}}};
+        expect(object.call(computedDescendents, hash)).toEqual({b: true, d: true, e: true});
+      });
+    });
+  });
 });
 
 describe("Expand List Method", function() {
+  
+});
+
+describe("Combine Lists Function", function() { 
+  var combineLists = variables.combineLists;
+  describe("when passed two strings", function() {
+    describe("when the second string begins with +", function() {
+      it("should return the two strings with the + removed, joined with a comma", function() {
+        expect(combineLists("foo,bar", "+zim,gir")).toEqual("foo,bar,zim,gir");
+      });
+    });
+    describe("when the second string doesn't begin with +", function() {
+      it("should return the second string", function() {
+        expect(combineLists("foo,bar", "zim,gir")).toEqual("zim,gir");
+      });
+    });
+  });
 });

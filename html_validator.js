@@ -114,16 +114,16 @@ var variables = {};
     return this.call(select, function(tag) { return tag.name != "#text" && tag.name != "#comment"; }); 
   };
 
-  var computedDescendents = function(doctype) {
+  var computedDescendents = function(tags) {
     var allowed = {}, banned = {};
     this.call(stack).call(map, function(element) {
-      if (doctype.tags[element.name]) {
-        allowed.call(merge, doctype.tags[element.name].allowed_descendents || {});
-        banned.call(merge, doctype.tags[element.name].banned_descendents || {});  
+      if (tags[element.name]) {
+        allowed.call(merge, tags[element.name].allowed_descendents || {});
+        banned.call(merge, tags[element.name].banned_descendents || {});
       }
     });
-    if (doctype.tags[this.name]) {
-      allowed = allowed.call(merge, doctype.tags[this.name].allowed_children || {});
+    if (tags[this.name]) {
+      allowed = allowed.call(merge, tags[this.name].allowed_children || {});
     }
     banned.call(each, function(item, name) { if (allowed[name]) delete allowed[name]; });
     return allowed;
@@ -142,6 +142,8 @@ var variables = {};
     });
     return map;
   };
+  
+  var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
 
   var baseDoctype = {
     groups: {},
@@ -149,7 +151,6 @@ var variables = {};
     rulesets: {},
     
     extend: function(spec) {
-      var combineLists = function(a,b) { return b ? (b.slice(0,1) == "+" ? a+","+b.slice(1) : b) : a.slice(0); };
       this.groups.call(each, function(groups, type) {
         spec.groups[type] = spec.groups[type] || {};
         groups.call(each, function(group, name) {
@@ -326,7 +327,7 @@ var variables = {};
         },
         allowed_children: function(doctype, doc) {
           var tag = this, errors = [];
-          var allowedDescendents = tag.call(computedDescendents, doctype);
+          var allowedDescendents = tag.call(computedDescendents, doctype.tags);
           (tag.children || []).call(htmlTags).call(map, function(child) {
             if (!allowedDescendents[child.name]) errors.push({parent: tag.name, child: child.name, line: child.line});
           });
@@ -691,6 +692,6 @@ var variables = {};
     each: each, map: map, select: select, keys: keys, values: values, method: method, 
     merge: merge, shifted: shifted, clone: clone, hash: hash, numbered: numbered, groupUnique: groupUnique, 
     englishList: englishList, reassemble: reassemble, stack: stack, 
-    htmlTags: htmlTags, computedDescendents: computedDescendents, expandList: expandList
+    htmlTags: htmlTags, computedDescendents: computedDescendents, expandList: expandList, combineLists: combineLists
   };
 })(jQuery);
