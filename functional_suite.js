@@ -2,9 +2,9 @@
 //This suite relies on one protoypal change which allows functions be called as methods.
 //http://www.extended-gameplay.com/#/title+Flipped_call()_method_in_Javascript/
 
-Object.prototype.call = function(fn) { return fn.apply(this, Array.prototype.slice.call(arguments, 1)); };
-
 var shifted = function(args) { return Array.prototype.slice.call(args, 1); };
+Object.prototype.call = function(fn) { return fn.apply(this, shifted(arguments)); };
+
 var values = function() { return this.call(each, function(item) { return item; }); };
 var keys = function() { return this.call(each, function(item, key) { return key; }); };
 var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
@@ -51,3 +51,9 @@ var hash = function(fn) {
   this.call(map, function(item, i) { obj[item] = fn ? fn(item, i) : true; });
   return obj;
 };
+
+var getClass = function(obj) { 
+  return obj !== undefined && obj !== null && Object.prototype.toString.call(obj).slice(8, -1); 
+};
+
+var is = function(findClass, obj) { return getClass(obj) === findClass; };

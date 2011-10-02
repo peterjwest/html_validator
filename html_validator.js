@@ -67,17 +67,17 @@
     },
 
     expandList: function(groups) {
-      if (!this.indexOf) return this;
-      var map = this.split(",").call(hash, numbered);
-      map.call(each, function(value, name) {
+      if (!is("String", this)) return this;
+      var list = this.split(",").call(hash, numbered);
+      list.call(each, function(value, name) {
         if (groups[name]) {
-          delete map[name];
+          delete list[name];
           var group = groups[name].call(fn.expandList, groups);
           group.call(each, function(item, tag) { this[tag] = value; });
-          map.call(merge, group);
+          list.call(merge, group);
         }
       });
-      return map;
+      return list;
     }
   };
 
