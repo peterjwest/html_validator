@@ -177,15 +177,34 @@ describe("Validator Spec", function() {
     
     describe("when called on a string", function() {
       var string = "one,two,three";
+      var should;
      
-        describe("when passed an empty hash", function() {
-          var hash = {};
-          it("should create a hash from each comma separated value in the string", function() {
-            expect(string.call(fn.expandList, hash)).toEqual({one: 1, two: 2, three: 3});
-          });
+      describe("when passed an empty hash", function() {
+        var hash = {};
+        it("should create a hash with keys of each comma separated item in the string", function() {
+          expect(string.call(fn.expandList, hash).call(keys)).toEqual(["one", "two", "three"]);
         });
-        describe("when passed a hash of strings", function() {
-          var hash = {two: "a,b,c", four: "x,y,z"};
+        it("should set the hash values to be the order of the items in the string", function() {
+          expect(string.call(fn.expandList, hash)).toEqual({one: 1, two: 2, three: 3});
+        });
+      });
+      
+      describe("when passed a hash of strings", function() {
+        var hash = {two: "a,b,c", c: "x,y"};
+        should = [
+          "should create a hash from each comma separated item in the string",
+          "excluding items found as keys the passed hash",
+          "instead calling expandList on the passed hash value and merge the result into the created hash"
+        ];
+        it(should.join(" "), function() {
+          expect(string.call(fn.expandList, hash).call(keys)).toEqual(["one", "three", "a", "b", "x", "y"]);
+        });
+        should = [
+          "should set the hash values to be the order of the items in the string",
+          "recursively included values should be the order of the corresponding exlucded item"
+        ];
+        it(should.join(" "), function() {
+          expect(string.call(fn.expandList, hash)).toEqual({one: 1, a: 2, b: 2, x: 2, y: 2, three: 3});
         });
       });
     });

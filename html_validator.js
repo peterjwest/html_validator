@@ -13,7 +13,7 @@
 })(jQuery);
 
 (function($) {
-  var fn =  {
+  var fn = {
     englishList: function(conjunction) {
       var last = this.length - 1;
       return this.slice(0, last).join(", ")+(last > 0 ? (conjunction || " and ") : "")+(this[last] || "");
@@ -65,7 +65,7 @@
       banned.call(each, function(item, name) { if (allowed[name]) delete allowed[name]; });
       return allowed;
     },
-
+    
     expandList: function(groups) {
       if (!is("String", this)) return this;
       var list = this.split(",").call(hash, numbered);
@@ -240,9 +240,9 @@
      
       while (html) {
         if (current && doctype.groups.tags.cdata_elements[current.name]) {
-          //removed "[^>]*" from regex end, need to check with John Resig
+          //Removed "[^>]*" from regex end, need to check with John Resig
           html = html.replace(new RegExp("(.*)<\/"+current.name+">"), function(all, text) {
-            //need more robust solution, and logging of whether cdata tag is used
+            //Need more robust solution, and logging of whether cdata tag is used
             text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
             current.children.push({name: '#text', value: text, unary: true, html: all});
             return "";
@@ -293,32 +293,53 @@
       rulesets: {},
       
       extend: function(spec) {
+        this.extendGroups(spec);
+        this.extendAttrs(spec);
+        this.extendRulesets(spec);
+        return this.copyMethods(spec);
+      },
+      
+      extendGroups: function(spec) {
         this.groups.call(each, function(groups, type) {
           spec.groups[type] = spec.groups[type] || {};
           groups.call(each, function(group, name) {
             spec.groups[type][name] = fn.combineLists(group, spec.groups[type][name]);
           });
         });
+      },
+      
+      extendAttrs: function(spec) {
         spec.attrs = spec.attrs || {};
         this.attrs.call(each, function(attrs, type) {
           spec.attrs[type] = (attrs || []).concat(spec.attrs[type] || []);
         });
+      },
+      
+      extendRulesets: function(spec) {
         spec.rulesets = spec.rulesets || {};
         this.rulesets.call(each, function(rulesets, name) {
           spec.rulesets[name] = (rulesets.call(map, method, clone) || []).concat(spec.rulesets[name] || []);
         });
-        return spec.call(merge, this.call(clone, ['extend', 'compute', 'validate', 'rules']));
+      },
+      
+      copyMethods: function(spec) {
+        return spec.call(merge, this.call(
+          clone,
+          ['extend', 'extendGroups', 'extendAttrs', 'extendRulesets', 'copyMethods', 'compute', 'validate', 'rules']
+        ));
       },
       
       compute: function() {
         if (this.computed) return;
         this.computed = true;
+        //Expand groups
         this.groups.call(each, function(groupType, type) {
           groupType.call(each, function(group, name) {
             groupType[name] = group.call(fn.expandList, groupType);
           });
         });
         var groups = this.groups;
+        //Expand attrs
         this.attrs.call(each, function(attrs) {
           attrs.call(map, function(rule) {
             rule.attrs = rule.attrs.call(fn.expandList, groups.attrs);
@@ -329,6 +350,7 @@
             if (rule.exclude) rule.exclude = rule.exclude.call(fn.expandList, groups.tags);
           });
         });
+        //Expand rulesets
         this.rulesets.call(each, function(ruleset, name) {
           ruleset.call(map, function(rules) {
             rules.call(each, function(rule, type) {
@@ -336,10 +358,12 @@
             });
           });
         });
+        //Initialise tags
         var tags = this.tags = groups.tags.all.call(clone);
         tags.call(each, function(tag, name) {
           tags[name] = {};
         });
+        //???
         this.rulesets.call(each, function(rules, ruleName) {
           rules.call(map, function(rule, i) {
             rule.tags.call(each, function(tag, name) {
