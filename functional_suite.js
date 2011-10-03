@@ -13,6 +13,11 @@ var numbered = function(item, i) {  return i + 1; };
 var min = function() { return Math.min.apply({}, this); };
 var max = function() { return Math.max.apply({}, this); };
 var last = function() { return this[this.length - 1]; };
+var is = function(findClass, obj) { return getClass(obj) === findClass; };
+
+var getClass = function(obj) { 
+  return obj !== undefined && obj !== null && Object.prototype.toString.call(obj).slice(8, -1); 
+};
 
 var each = function(fn) {
   var array = [];
@@ -55,8 +60,10 @@ var hash = function(fn) {
   return obj;
 };
 
-var getClass = function(obj) { 
-  return obj !== undefined && obj !== null && Object.prototype.toString.call(obj).slice(8, -1); 
+var sum = function() {
+  var total = 0;
+  this.call(map, function(item) { total += item; });
+  return total;
 };
 
-var is = function(findClass, obj) { return getClass(obj) === findClass; };
+
