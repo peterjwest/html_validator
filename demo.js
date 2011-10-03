@@ -6,7 +6,7 @@ $(document).ready(function() {
   console.log(validator.parseSettings({}));
   console.log(validator.parseSettings({url: ""}));
   console.log(validator.parseSettings({html: html}));
-  console.log(validator.parseSettings({fragment: $("div")}));  
+  console.log(validator.parseSettings({fragment: $("div")}));
   
   /*
   validator.parse({doctype: "HTML 4.01 Transitional"});

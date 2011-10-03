@@ -78,6 +78,29 @@
         }
       });
       return list;
+    },
+    
+    formatMessage: function(data) {
+      var matchTag = /(<)(([^<>\s]+)[^<>]*)>/g;
+      var matchAttr = /(\[)(([^\[\]\s]+)[^\[\]]*)\]/g;
+      var inTag = function() { return "<"+this+">"; };
+      var insertItem = function(match, type, options, name, position, string) {
+        if (data[name] === undefined) return match;
+        var list = data[name].join;
+        var separator = (options.match(/\s+\S+\s+/) || [" and "])[0];
+        if (type == "<") {
+          return list ? data[name].call(map, method, inTag).call(fn.englishList, separator) : data[name].call(inTag);
+        }
+        if (type == "[") {
+          return list ? data[name].call(fn.englishList, separator) : data[name];
+        }
+      };
+      return this.replace(matchTag, insertItem).replace(matchAttr, insertItem);
+    },
+    
+    contextualiseMessages: function() {
+      var messages = this.sort(function(a, b) { return a.line - b.line; });
+      return messages.call(map, function(message) { return message.message+" on line "+message.line; }).join("\n");
     }
   };
 
@@ -120,13 +143,11 @@
       var startTag = /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/;
       var endTag = /<\/(\w+)[^>]*>/;
       var attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g;
-      var doc = { name: '#root', children: [], all: [], closed: true };
+      var doc;
       var html = settings.html, doctype = settings.doctype;
       var index, match, endedTag, lastHtml = html, current = doc;
       var depth = function(tag) { return current.call(fn.stack).call(map, get, "name").call(hash, numbered)[tag] - 1; };
-      var min = function() { return Math.min.apply({}, this); };
-      var last = function() { return this[this.length - 1]; };
-      doc.all.push(doc);
+      doc = { name: '#root', children: [doc], all: [], closed: true };
       
       //Computes allowed child elements based on allowed_children and allowed_descendents rules
       var allowedChildren = function() {
@@ -199,6 +220,7 @@
       };
       
       var parseEndTag = function(html, tag) {
+        //This needs work, depth function probably not needed
         var index = tag ? current.call(depth, tag) : 0;
         var endedTags = index >= 0 ? current.call(fn.stack).slice(index) : [];
         //Deals with a number of existing elements being closed
@@ -224,7 +246,7 @@
             current = start;
           });
           var endedTag = endedTags[0];
-          if (html) { 
+          if (html) {
             endedTag.closed = true;
             endedTag.endHtml = html;
           }
@@ -299,6 +321,12 @@
         return this.copyMethods(spec);
       },
       
+      resetHashes: function() {
+        this.groups = {};
+        this.attrs = {};
+        this.rulesets = {};
+      },
+      
       extendGroups: function(spec) {
         this.groups.call(each, function(groups, type) {
           spec.groups[type] = spec.groups[type] || {};
@@ -323,10 +351,7 @@
       },
       
       copyMethods: function(spec) {
-        return spec.call(merge, this.call(
-          clone,
-          ['extend', 'extendGroups', 'extendAttrs', 'extendRulesets', 'copyMethods', 'compute', 'validate', 'rules']
-        ));
+        return this.call(clone).call(merge, spec);
       },
       
       compute: function() {
@@ -363,7 +388,7 @@
         tags.call(each, function(tag, name) {
           tags[name] = {};
         });
-        //???
+        //Populate rules into tags, special case for allowed_children
         this.rulesets.call(each, function(rules, ruleName) {
           rules.call(map, function(rule, i) {
             rule.tags.call(each, function(tag, name) {
@@ -378,8 +403,9 @@
             });
           });
         });
+        //Populate all, allowed and required attributes into tags
         var attrGroups = this.attrs;
-        this.tags.call(each, function(tag, name) {
+        tags.call(each, function(tag, name) {
           attrGroups.call(each, function(attrs, type) {
             tag.attrs = tag.attrs || {};
             tag.attrs[type] = tag.attrs[type] || {};
@@ -391,13 +417,13 @@
           });
           tag.attrs["all"] = tag.attrs["optional"].call(merge, tag.attrs["required"]);
         });
-
+        //Calculate implicit children
         groups.tags.implicit.call(each, function(tag, name) {
           if (tags[name].allowed_parents) {
             tags[name].allowed_parents.call(each, function(parent, parentName) {
               tags[parentName].implicit_children = tags[parentName].implicit_children || {};
-              var implicit_child = (tags[parentName].exact_children || tags[parentName].ordered_children)[name];
-              tags[parentName].implicit_children[implicit_child] = name;
+              var position = (tags[parentName].exact_children || tags[parentName].ordered_children)[name];
+              tags[parentName].implicit_children[position] = name;
             });
           }
         });
@@ -405,30 +431,16 @@
       },
       
       validate: function(doc) {
-        var doctype = this, errors = [], current;
-        var matchTag = /(<)(([^<>\s]+)[^<>]*)>/g, matchAttr = /(\[)(([^\[\]\s]+)[^\[\]]*)\]/g;
-        var inTag = function() { return "<"+this+">"; };
-        var insertItem = function(match, type, options, name, position, string) {
-          if (current[name] === undefined) return match;
-          var list = current[name].join;
-          var separator = (options.match(/\s+\S+\s+/) || [" and "])[0];
-          if (type == "<") {
-            return list ? current[name].call(map, method, inTag).call(fn.englishList, separator) : current[name].call(inTag);
-          }
-          if (type == "[") {
-            return list ? current[name].call(fn.englishList, separator) : current[name];
-          }
-        };
+        var doctype = this, errors = [];
         doctype.rules.rules.call(each, function(rule, name) {
           doc.all.call(map, function(tag) {
-            errors = errors.concat(tag.call(rule, doctype, doc, doctype.rulesets[name] || []).call(map, function(error) { 
-              current = error;
-              error.message = doctype.rules.messages[name].replace(matchTag, insertItem).replace(matchAttr, insertItem);
-              return error;
-            }));
+            errors = errors.concat(tag.call(rule, doctype, doc, doctype.rulesets[name] || []));
+            errors.call(map, function(error, i) {
+              errors[i].message = doctype.rules.messages[name].call(fn.formatMessage, error);
+            });
           });
         });
-        return errors.sort(function(a, b) { return a.line - b.line; }).call(map, function(error) { return error.message+" on line "+error.line; }).join("\n");
+        return errors.call(fn.contextualiseMessages);
       },
       
       rules: {

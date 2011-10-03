@@ -10,6 +10,9 @@ var keys = function() { return this.call(each, function(item, key) { return key;
 var method = function(obj, key, fn) { return fn.apply(obj, Array.prototype.slice.call(arguments, 3)); };
 var get = function(item, key, attr) { return item[attr] }; 
 var numbered = function(item, i) {  return i + 1; };
+var min = function() { return Math.min.apply({}, this); };
+var max = function() { return Math.max.apply({}, this); };
+var last = function() { return this[this.length - 1]; };
 
 var each = function(fn) {
   var array = [];
