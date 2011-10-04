@@ -519,46 +519,47 @@
       },
 
       run: function(settings) {
-        this.doctype = settings.doctype;
-        var lastHtml = this.html = settings.html;
-        this.currentElement = this.doc = { name: '#root', children: [], all: [], closed: true };
-        this.doc.all.push(this.doc);
+        var parser = this;
+        parser.doctype = settings.doctype;
+        var lastHtml = parser.html = settings.html;
+        parser.currentElement = parser.doc = { name: '#root', children: [], all: [], closed: true };
+        parser.doc.all.push(parser.doc);
         var comment, startTag, endTag;
-        while (this.html) {
-          if (this.currentElement && this.doctype.groups.tags.cdata_elements[this.currentElement.name]) {
+        while (parser.html) {
+          if (parser.currentElement && parser.doctype.groups.tags.cdata_elements[parser.currentElement.name]) {
             //Removed "[^>]*" from regex end, need to check with John Resig
-            this.html = this.html.replace(new RegExp("(.*)<\/"+this.currentElement.name+">"), function(all, text) {
+            parser.html = parser.html.replace(new RegExp("(.*)<\/"+parser.currentElement.name+">"), function(all, text) {
               //Need more robust solution, and logging of whether cdata tag is used
               text = text.replace(/<!--(.*?)-->/g, "$1").replace(/<!\[CDATA\[(.*?)]]>/g, "$1");
-              this.currentElement.children.push({name: '#text', value: text, unary: true, html: all});
+              parser.currentElement.children.push({name: '#text', value: text, unary: true, html: all});
               return "";
             });
-            this.parseEndTag("", this.currentElement.name);
+            parser.parseEndTag("", parser.currentElement.name);
           } 
-          else if ((comment = this.html.indexOf("<!--")) == 0) {
-            var end = this.html.indexOf("-->");
-            this.currentElement.children.push({ name: "#comment", value: this.html.substring(4, end), html: this.html.substring(0, end + 3), closed: end != -1 });
-            this.html = end == -1 ? "" : this.html.substring(end + 3);
+          else if ((comment = parser.html.indexOf("<!--")) == 0) {
+            var end = parser.html.indexOf("-->");
+            parser.currentElement.children.push({ name: "#comment", value: parser.html.substring(4, end), html: parser.html.substring(0, end + 3), closed: end != -1 });
+            parser.html = end == -1 ? "" : parser.html.substring(end + 3);
           }
-          else if ((startTag = this.html.search(this.regex.endTag)) == 0) {
-            this.call(fn.runRegex, this.html, this.regex.endTag, this.parseEndTag);
+          else if ((startTag = parser.html.search(parser.regex.endTag)) == 0) {
+            parser.call(fn.runRegex, parser.html, parser.regex.endTag, parser.parseEndTag);
           }
-          else if ((endTag = this.html.search(this.regex.startTag)) == 0) {
-            this.call(fn.runRegex, this.html, this.regex.startTag, this.parseStartTag);
+          else if ((endTag = parser.html.search(parser.regex.startTag)) == 0) {
+            parser.call(fn.runRegex, parser.html, parser.regex.startTag, parser.parseStartTag);
           }
           //If no tag is immediately found, find the distance nearest tag, and take everything up to that point
           else {
             var index = ([comment, startTag, endTag].call(select, function(match) { return match >= 0; }) || []).call(min);
-            var text = index < 0 ? this.html : this.html.substring(0, index);
-            this.currentElement.children.push({name: '#text', value: text, html: text, unary: true});
-            this.html = index < 0 ? "" : this.html.substring(index);
+            var text = index < 0 ? parser.html : parser.html.substring(0, index);
+            parser.currentElement.children.push({name: '#text', value: text, html: text, unary: true});
+            parser.html = index < 0 ? "" : parser.html.substring(index);
           }
-          if (this.html == lastHtml) throw "Parse Error: " + this.html;
-          lastHtml = this.html;
+          if (parser.html == lastHtml) throw "Parse Error: " + parser.html;
+          lastHtml = parser.html;
         }
-        this.parseEndTag("");
-        this.doc.call(fn.findLines, 1);
-        return this.doc;
+        parser.parseEndTag("");
+        parser.doc.call(fn.findLines, 1);
+        return parser.doc;
       },
       
       parseStartTag: function(html, tag, rest, selfClosed) {
