@@ -289,10 +289,11 @@
         var doctype = this, errors = [];
         doctype.rules.rules.call(each, function(rule, name) {
           doc.all.call(map, function(tag) {
-            errors = errors.concat(tag.call(rule, doctype, doc, doctype.rulesets[name] || []));
-            errors.call(map, function(error, i) {
-              errors[i].message = doctype.rules.messages[name].call(fn.formatMessage, error);
+            var tag_errors = tag.call(rule, doctype, doc, doctype.rulesets[name] || []);
+            tag_errors.call(map, function(error, i) {
+              tag_errors[i].message = doctype.rules.messages[name].call(fn.formatMessage, error);
             });
+            errors = errors.concat(tag_errors);
           });
         });
         return errors.call(fn.contextualiseMessages);
@@ -506,7 +507,7 @@
           required_at_least_one_child: "<tag> must contain at least one of <child or child>",
           required_children: "<parent> must contain <child>",
           unary: "<tag> must not have a closing tag",
-          unique_children: "<parent> can't contain more than one <child>" //add count
+          unique_children: "<parent> can't contain more than one <child>"
         }
       }
     },
@@ -514,7 +515,7 @@
     parser: {
       regex: {
         startTag: /<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/,
-        endTag: /<\/(\w+)>/, //Removed "[^>]*" from regex end, need to check with John Resig
+        endTag: /<\/(\w+)>/, //Removed "" from regex end, need to check with John Resig
         attr: /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g
       },
 
@@ -524,6 +525,7 @@
         var lastHtml = parser.html = settings.html;
         parser.currentElement = parser.doc = { name: '#root', children: [], all: [], closed: true };
         parser.doc.all.push(parser.doc);
+        
         var comment, startTag, endTag;
         while (parser.html) {
           if (parser.currentElement && parser.doctype.groups.tags.cdata_elements[parser.currentElement.name]) {
@@ -541,11 +543,13 @@
             parser.currentElement.children.push({ name: "#comment", value: parser.html.substring(4, end), html: parser.html.substring(0, end + 3), closed: end != -1 });
             parser.html = end == -1 ? "" : parser.html.substring(end + 3);
           }
-          else if ((startTag = parser.html.search(parser.regex.endTag)) == 0) {
+          else if ((endTag = parser.html.search(parser.regex.endTag)) == 0) {
             parser.call(fn.runRegex, parser.html, parser.regex.endTag, parser.parseEndTag);
+            parser.html = parser.html.substring(parser.html.match(parser.regex.endTag)[0].length);
           }
-          else if ((endTag = parser.html.search(parser.regex.startTag)) == 0) {
+          else if ((startTag = parser.html.search(parser.regex.startTag)) == 0) {
             parser.call(fn.runRegex, parser.html, parser.regex.startTag, parser.parseStartTag);
+            parser.html = parser.html.substring(parser.html.match(parser.regex.startTag)[0].length);
           }
           //If no tag is immediately found, find the distance nearest tag, and take everything up to that point
           else {
@@ -564,7 +568,6 @@
       
       parseStartTag: function(html, tag, rest, selfClosed) {
         var parser = this;
-        parser.html = parser.html.substring(html.length);
         var prev = parser.currentElement.children.call(fn.htmlTags).call(last);
         //Checks for implicit child elements
         if (parser.doctype.tags[parser.currentElement.name] && parser.doctype.tags[parser.currentElement.name].implicit_children) {
@@ -626,18 +629,20 @@
       
       parseEndTag: function(html, tag) {
         var parser = this;
-        parser.html = parser.html.substring(html.length);
         var index = tag ? (parser.currentElement.call(fn.stack).call(map, get, "name").call(hash, numbered)[tag] - 1) : 0;
         var endedTags = index >= 0 ? parser.currentElement.call(fn.stack).slice(index) : [];
         //Deals with a number of existing elements being closed
         if (endedTags.length > 0) {
+          var initial = parser.currentElement;
           endedTags.call(each, function(tag) {
-            var start = parser.currentElement;
+            parser.currentElement = tag;
+            var parent = tag.parent;
             //Checks for implicit elements which have not been added because they don't have any content
-            while (parser.currentElement !== start.parent) {
-              if (parser.doctype.tags[parser.currentElement.name] && parser.doctype.tags[parser.currentElement.name].implicit_children) {
+            while (parser.currentElement !== parent) {
+              var currentTagRules = parser.doctype.tags[parser.currentElement.name];
+              if (currentTagRules && currentTagRules.implicit_children) {
                 var element = false;
-                parser.doctype.tags[parser.currentElement.name].implicit_children.call(each, function(implicit) {
+                currentTagRules.implicit_children.call(each, function(implicit) {
                   if (!element && parser.currentElement.children.call(select, function(c) { return c.name+"" == implicit; }).length == 0) {
                     element = { name: implicit, implicit: true, children: [], parent: parser.currentElement, html: '' };
                     parser.currentElement.children.push(element);
@@ -649,8 +654,8 @@
               }
               else parser.currentElement = parser.currentElement.parent;
             }
-            parser.currentElement = start;
           });
+          parser.currentElement = initial;
           var endedTag = endedTags[0];
           if (html) {
             endedTag.closed = true;

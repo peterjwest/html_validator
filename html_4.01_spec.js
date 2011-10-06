@@ -19,7 +19,7 @@ jQuery.htmlValidator.addSpec(function(baseDoctype) {
         implicit: 'body,head,html,tbody',
         inline: '#pcdata,font_style,phrase,special,form_controls',
         list: 'ul,ol',
-        not_empty: 'blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr',
+        not_empty: 'body,blockquote,b,dl,fieldset,form,ul,ol,map,optgroup,select,thead,tfoot,tbody,tr',
         pre_excluded: 'img,object,big,small,sub,sup',
         table_elements: 'col,colgroup,tbody,td,tfoot,th,thead,tr',
         unary: 'area,base,br,col,hr,img,input,link,meta,param',
